@@ -2,12 +2,13 @@
 import EncryptedMessageHeader from './header';
 import EncryptedMessageRecipient from './recipient';
 import EncryptedMessagePayload from './payload';
+import {chunkBuffer} from '../util';
 import {Readable, Transform, TransformCallback} from 'stream';
 import * as crypto from 'crypto';
 import * as util from 'util';
 import * as tweetnacl from 'tweetnacl';
 import * as msgpack from '@msgpack/msgpack';
-import chunk = require('lodash.chunk');
+import {DataViewIndexOutOfBoundsError} from '@msgpack/msgpack/dist/Decoder';
 
 const randomBytes = util.promisify(crypto.randomBytes);
 
@@ -20,8 +21,7 @@ export let debug_fix_keypair: tweetnacl.BoxKeyPair | null = null;
 export async function encrypt(
     data: Uint8Array | string, keypair: tweetnacl.BoxKeyPair | null, recipients_keys: Uint8Array[]
 ): Promise<Buffer> {
-    if (!(data instanceof Buffer)) data = Buffer.from(data);
-    const chunks = chunk(data, CHUNK_LENGTH).map(c => Buffer.from(c));
+    const chunks = chunkBuffer(data, CHUNK_LENGTH);
 
     // 1. Generate a random 32-byte payload key.
     const payload_key = debug_fix_key ?? await randomBytes(32);
@@ -61,10 +61,10 @@ export class EncryptStream extends Transform {
     readonly payload_key: Buffer;
     readonly ephemeral_keypair: tweetnacl.BoxKeyPair;
     readonly keypair: tweetnacl.BoxKeyPair;
-
     readonly header: EncryptedMessageHeader;
     private in_buffer = Buffer.alloc(0);
     private payload_index = BigInt(0);
+    private i = 0;
 
     constructor(keypair: tweetnacl.BoxKeyPair | null, recipients_keys: Uint8Array[]) {
         super();
@@ -95,7 +95,7 @@ export class EncryptStream extends Transform {
     }
 
     _transform(data: Buffer, encoding: string, callback: TransformCallback) {
-        if (debug) console.log('Processing chunk #d: %s', -1, data);
+        if (debug) console.log('Processing chunk #%d: %s', this.i++, data);
 
         this.in_buffer = Buffer.concat([this.in_buffer, data]);
 
@@ -187,25 +187,24 @@ export async function decrypt(encrypted: Uint8Array, keypair: tweetnacl.BoxKeyPa
         output = Buffer.concat([output, payload.decrypt(header, recipient, payload_key, BigInt(i))]);
     }
 
+    if (!items.length) {
+        throw new Error('No encrypted payloads, message truncated?');
+    }
+
     return Object.assign(output, {
         sender_public_key,
     });
 }
 
 export class DecryptStream extends Transform {
-    private in_stream: Readable;
+    private decoder = new msgpack.Decoder(undefined!, undefined);
     private header_data: [EncryptedMessageHeader, Buffer, EncryptedMessageRecipient, Buffer] | null = null;
     private last_payload: EncryptedMessagePayload | null = null;
     private payload_index = BigInt(-1);
-    private end_callback: TransformCallback | null = null;
+    private i = 0;
 
     constructor(readonly keypair: tweetnacl.BoxKeyPair) {
         super();
-
-        this.in_stream = new Readable({
-            read() {},
-        });
-        this._start();
     }
 
     get header() {
@@ -225,27 +224,28 @@ export class DecryptStream extends Transform {
         return this.header_data[3];
     }
 
-    private async _start() {
-        for await (const item of msgpack.decodeStream(this.in_stream)) {
-            this._handleMessage(item);
+    _transform(data: Buffer, encoding: string, callback: TransformCallback) {
+        this.decoder.appendBuffer(data);
+
+        try {
+            let message;
+            while (message = this.decoder.decodeSync()) {
+                const remaining = Buffer.from(this.decoder.bytes).slice(this.decoder.pos);
+                this.decoder.setBuffer(remaining);
+
+                this._handleMessage(message);
+            }
+        } catch (err) {
+            if (!(err instanceof DataViewIndexOutOfBoundsError)) {
+                return callback(err);
+            }
         }
 
-        await this._handleEnd();
-        this.end_callback?.call(this);
-    }
-
-    _transform(data: Buffer, encoding: string, callback: TransformCallback) {
-        this.in_stream.push(data);
         callback();
     }
 
-    _flush(callback: TransformCallback) {
-        this.in_stream.push(null);
-        this.end_callback = callback;
-    }
-
     private _handleMessage(data: unknown) {
-        if (debug) console.log('Processing chunk #d: %s', -1, data);
+        if (debug) console.log('Processing chunk #%d: %s', this.i++, data);
 
         if (!this.header_data) {
             const header = EncryptedMessageHeader.decode(data as any, true);
@@ -263,9 +263,7 @@ export class DecryptStream extends Transform {
 
             if (this.last_payload) {
                 if (this.last_payload.final) {
-                    const err = new Error('Found payload with invalid final flag, message extended?');
-                    this.emit('error', err);
-                    throw err;
+                    throw new Error('Found payload with invalid final flag, message extended?');
                 }
 
                 this.push(this.last_payload.decrypt(
@@ -278,13 +276,19 @@ export class DecryptStream extends Transform {
         }
     }
 
-    private _handleEnd() {
-        if (this.last_payload) {
-            if (!this.last_payload.final) {
-                throw new Error('Found payload with invalid final flag, message truncated?');
+    _flush(callback: TransformCallback) {
+        try {
+            if (this.last_payload) {
+                if (!this.last_payload.final) {
+                    throw new Error('Found payload with invalid final flag, message truncated?');
+                }
+        
+                this.push(this.last_payload.decrypt(this.header, this.recipient, this.payload_key, this.payload_index));
             }
-    
-            this.push(this.last_payload.decrypt(this.header, this.recipient, this.payload_key, this.payload_index));
+        } catch (err) {
+            return callback(err);
         }
+
+        callback();
     }
 }

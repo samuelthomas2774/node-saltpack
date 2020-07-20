@@ -1,18 +1,18 @@
 
 import SignedMessageHeader from './header';
 import SignedMessagePayload from './payload';
+import {chunkBuffer} from '../util';
 import {Transform, Readable, TransformCallback} from 'stream';
 import * as tweetnacl from 'tweetnacl';
 import * as msgpack from '@msgpack/msgpack';
-import chunk = require('lodash.chunk');
+import {DataViewIndexOutOfBoundsError} from '@msgpack/msgpack/dist/Decoder';
 
 export let debug = false;
 
 export const CHUNK_LENGTH = 1024 * 1024;
 
 export function sign(data: Uint8Array | string, keypair: tweetnacl.SignKeyPair): Buffer {
-    if (!(data instanceof Buffer)) data = Buffer.from(data);
-    const chunks = chunk(data, CHUNK_LENGTH).map(c => Buffer.from(c));
+    const chunks = chunkBuffer(data, CHUNK_LENGTH);
 
     const header = SignedMessageHeader.create(keypair.publicKey, true);
     const payloads = [];
@@ -133,19 +133,14 @@ export async function verify(signed: Uint8Array, public_key: Uint8Array): Promis
 }
 
 export class VerifyStream extends Transform {
-    private in_stream: Readable;
+    private decoder = new msgpack.Decoder(undefined!, undefined);
     private header_data: SignedMessageHeader | null = null;
     private last_payload: SignedMessagePayload | null = null;
     private payload_index = BigInt(-1);
-    private end_callback: TransformCallback | null = null;
+    private i = 0;
 
     constructor(readonly public_key: Uint8Array) {
         super();
-
-        this.in_stream = new Readable({
-            read() {},
-        });
-        this._start();
     }
 
     get header() {
@@ -153,27 +148,28 @@ export class VerifyStream extends Transform {
         return this.header_data;
     }
 
-    private async _start() {
-        for await (const item of msgpack.decodeStream(this.in_stream)) {
-            this._handleMessage(item);
+    _transform(data: Buffer, encoding: string, callback: TransformCallback) {
+        this.decoder.appendBuffer(data);
+
+        try {
+            let message;
+            while (message = this.decoder.decodeSync()) {
+                const remaining = Buffer.from(this.decoder.bytes).slice(this.decoder.pos);
+                this.decoder.setBuffer(remaining);
+
+                this._handleMessage(message);
+            }
+        } catch (err) {
+            if (!(err instanceof DataViewIndexOutOfBoundsError)) {
+                return callback(err);
+            }
         }
 
-        await this._handleEnd();
-        this.end_callback?.call(this);
-    }
-
-    _transform(data: Buffer, encoding: string, callback: TransformCallback) {
-        this.in_stream.push(data);
         callback();
     }
 
-    _flush(callback: TransformCallback) {
-        this.in_stream.push(null);
-        this.end_callback = callback;
-    }
-
     private _handleMessage(data: unknown) {
-        if (debug) console.log('Processing chunk #d: %s', -1, data);
+        if (debug) console.log('Processing chunk #%d: %O', this.i++, data);
 
         if (!this.header_data) {
             const header = SignedMessageHeader.decode(data as any, true);
@@ -199,14 +195,20 @@ export class VerifyStream extends Transform {
         }
     }
 
-    private _handleEnd() {
-        if (this.last_payload) {
-            if (!this.last_payload.final) {
-                throw new Error('Found payload with invalid final flag, message truncated?');
+    _flush(callback: TransformCallback) {
+        try {
+            if (this.last_payload) {
+                if (!this.last_payload.final) {
+                    throw new Error('Found payload with invalid final flag, message truncated?');
+                }
+        
+                this.push(this.last_payload.data);
             }
-    
-            this.push(this.last_payload.data);
+        } catch (err) {
+            return callback(err);
         }
+
+        callback();
     }
 }
 

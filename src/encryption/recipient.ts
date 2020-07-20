@@ -6,9 +6,9 @@ export default class EncryptedMessageRecipient {
     static readonly PAYLOAD_KEY_BOX_NONCE_PREFIX_V2 = Buffer.from('saltpack_recipsb');
 
     /** The recipient's X25519 public key, or null if the recipient is anonymous and we aren't the sender */
-    readonly public_key: Buffer | null;
+    readonly public_key: Uint8Array | null;
     /** The NaCl box containing the payload key for this recipient */
-    readonly encrypted_payload_key: Buffer;
+    readonly encrypted_payload_key: Uint8Array;
     /** The recipient index, starting from zero */
     readonly index: bigint;
     /** The nonce for `encrypted_payload_key` */
@@ -18,7 +18,7 @@ export default class EncryptedMessageRecipient {
     /** The MAC key for this recipient (this is used to generate the per-payload authenticators for this recipient) */
     readonly mac_key: Buffer | null = null;
 
-    constructor(public_key: Buffer | null, encrypted_payload_key: Buffer, index: bigint, anonymous = false) {
+    constructor(public_key: Uint8Array | null, encrypted_payload_key: Uint8Array, index: bigint, anonymous = false) {
         this.public_key = public_key;
         this.encrypted_payload_key = encrypted_payload_key;
         this.index = index;
@@ -27,7 +27,7 @@ export default class EncryptedMessageRecipient {
     }
 
     /** @private */
-    setPublicKey(public_key: Buffer) {
+    setPublicKey(public_key: Uint8Array) {
         // @ts-expect-error
         this.public_key = public_key;
     }
@@ -36,7 +36,6 @@ export default class EncryptedMessageRecipient {
         public_key: Uint8Array, ephemeral_private_key: Uint8Array, payload_key: Uint8Array, index: number | bigint,
         anonymous = false
     ): EncryptedMessageRecipient {
-        if (public_key && !(public_key instanceof Buffer)) public_key = Buffer.from(public_key);
         if (typeof index === 'number') index = BigInt(index);
 
         const recipient_index = this.generateRecipientIndex(index);
@@ -44,16 +43,15 @@ export default class EncryptedMessageRecipient {
         // 4. For each recipient, encrypt the payload key using crypto_box with the recipient's public key, the ephemeral private key, and the nonce saltpack_recipsbXXXXXXXX. XXXXXXXX is 8-byte big-endian unsigned recipient index, where the first recipient is index zero. Pair these with the recipients' public keys, or null for anonymous recipients, and collect the pairs into the recipients list.
         const encrypted_payload_key = tweetnacl.box(payload_key, recipient_index, public_key, ephemeral_private_key);
 
-        return new this(public_key as any, Buffer.from(encrypted_payload_key), index, anonymous);
+        return new this(public_key, encrypted_payload_key, index, anonymous);
     }
 
     static from(
-        public_key: Uint8Array | null, encrypted_payload_key: Buffer, index: number | bigint
+        public_key: Uint8Array | null, encrypted_payload_key: Uint8Array, index: number | bigint
     ): EncryptedMessageRecipient {
-        if (public_key && !(public_key instanceof Buffer)) public_key = Buffer.from(public_key);
         if (typeof index === 'number') index = BigInt(index);
 
-        return new this(public_key as any, encrypted_payload_key, index, public_key === null);
+        return new this(public_key, encrypted_payload_key, index, public_key === null);
     }
 
     static generateRecipientIndex(index: bigint): Buffer {

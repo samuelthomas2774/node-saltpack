@@ -86,7 +86,7 @@ export default class EncryptedMessageHeader extends Header {
         return [header_hash, Buffer.from(msgpack.encode(encoded))];
     }
 
-    static decode(encoded: Buffer, unwrapped = false) {
+    static decode(encoded: Uint8Array, unwrapped = false) {
         const [header_hash, data] = super.decode1(encoded, unwrapped);
 
         if (data[2] !== MessageType.ENCRYPTION) throw new Error('Invalid data');
@@ -95,7 +95,7 @@ export default class EncryptedMessageHeader extends Header {
 
         const [,,, public_key, sender, recipients] = data;
 
-        return new this(public_key, sender, recipients.map((recipient: [Buffer, Buffer], index: number) => {
+        return new this(public_key, sender, recipients.map((recipient: [Uint8Array, Buffer], index: number) => {
             return EncryptedMessageRecipient.from(recipient[0], recipient[1], index);
         }));
     }
@@ -117,13 +117,13 @@ export default class EncryptedMessageHeader extends Header {
             if (recipient.public_key) {
                 // If the recipient's public key is shown in the recipients list (that is, if the recipient is
                 // not anonymous), clients may skip all the other payload key boxes in step #6.
-                if (!recipient.public_key.equals(keypair.publicKey)) continue;
+                if (!Buffer.from(recipient.public_key).equals(keypair.publicKey)) continue;
             }
 
             const payload_key = recipient.decryptPayloadKey(this.public_key, keypair.secretKey, shared_secret);
             if (!payload_key) continue;
 
-            recipient.setPublicKey(Buffer.from(keypair.publicKey));
+            recipient.setPublicKey(keypair.publicKey);
 
             return [payload_key, recipient];
         }

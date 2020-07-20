@@ -10,9 +10,9 @@ export enum MessageType {
 }
 
 export default class Header {
-    static decode1(encoded: Buffer, unwrapped = false) {
+    static decode1(encoded: Uint8Array, unwrapped = false): [Buffer, any] {
         // 1-3
-        const data = unwrapped ? encoded : msgpack.decode(encoded) as Buffer;
+        const data = unwrapped ? encoded : msgpack.decode(encoded) as Uint8Array;
         const header_hash = crypto.createHash('sha512').update(data).digest();
         const inner = msgpack.decode(data) as any;
 

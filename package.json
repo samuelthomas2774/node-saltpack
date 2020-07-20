@@ -2,17 +2,22 @@
     "name": "saltpack",
     "version": "0.1.0",
     "main": "dist/index.js",
+    "files": [
+        "dist",
+        "!dist/**/*.map",
+        "!dist/__tests__"
+    ],
     "dependencies": {
         "@msgpack/msgpack": "^1.12.2",
         "lodash.chunk": "^4.2.0",
-        "pump": "^3.0.0",
+        "pumpify": "^2.0.1",
         "tweetnacl": "^1.0.3"
     },
     "devDependencies": {
         "@types/jest": "^26.0.5",
         "@types/lodash.chunk": "^4.2.6",
         "@types/node": "^12.12.50",
-        "@types/pump": "^1.1.0",
+        "@types/pumpify": "^1.4.1",
         "jest": "^26.1.0",
         "typescript": "^3.9.7"
     },

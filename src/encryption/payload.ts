@@ -17,12 +17,12 @@ export default class EncryptedMessagePayload {
     /** `true` if this is the final payload */
     readonly final: boolean;
     /** An array of per-recipient authentication data */
-    readonly authenticators: Buffer[];
+    readonly authenticators: Uint8Array[];
     /** The NaCl secretbox for this payload */
-    readonly payload_secretbox: Buffer;
+    readonly payload_secretbox: Uint8Array;
     private _encoded_data: Buffer | null = null;
 
-    constructor(final: boolean, authenticators: Buffer[], payload_secretbox: Buffer) {
+    constructor(final: boolean, authenticators: Uint8Array[], payload_secretbox: Uint8Array) {
         this.final = final;
         this.authenticators = authenticators;
         this.payload_secretbox = payload_secretbox;
@@ -63,7 +63,7 @@ export default class EncryptedMessagePayload {
     }
 
     static generateAuthenticatorHash(
-        header_hash: Buffer, payload_secretbox: Buffer, payload_secretbox_nonce: Buffer, final: boolean
+        header_hash: Buffer, payload_secretbox: Uint8Array, payload_secretbox_nonce: Uint8Array, final: boolean
     ): Buffer {
         // 1. Concatenate the header hash, the nonce for the payload secretbox, the final flag byte (0x00 or 0x01),
         // and the payload secretbox itself.
@@ -87,7 +87,7 @@ export default class EncryptedMessagePayload {
      * @param string[] $authenticators
      * @return [string, string]
      */
-    static encodePayload(final: boolean, authenticators: Buffer[], payload_secretbox: Buffer): Buffer {
+    static encodePayload(final: boolean, authenticators: Uint8Array[], payload_secretbox: Uint8Array): Buffer {
         const data = [
             final,
             authenticators,
@@ -113,7 +113,7 @@ export default class EncryptedMessagePayload {
         }
 
         // @ts-expect-error
-        const authenticator = this.authenticators[recipient.index];
+        const authenticator: Uint8Array | undefined = this.authenticators[recipient.index];
 
         const index_buffer = Buffer.alloc(8);
         index_buffer.writeBigUInt64BE(index);
@@ -129,7 +129,7 @@ export default class EncryptedMessagePayload {
         const our_authenticator = crypto.createHmac('sha512', recipient.mac_key)
             .update(authenticator_hash).digest().slice(0, 32);
 
-        if (!authenticator.equals(our_authenticator)) {
+        if (!authenticator || !our_authenticator.equals(authenticator)) {
             throw new Error('Invalid authenticator');
         }
 
