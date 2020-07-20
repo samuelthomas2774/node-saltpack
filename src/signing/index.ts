@@ -129,6 +129,10 @@ export async function verify(signed: Uint8Array, public_key: Uint8Array): Promis
         output = Buffer.concat([output, payload.data]);
     }
 
+    if (!items.length) {
+        throw new Error('No signed payloads, message truncated?');
+    }
+
     return output;
 }
 
@@ -203,6 +207,10 @@ export class VerifyStream extends Transform {
                 }
 
                 this.push(this.last_payload.data);
+            }
+
+            if (!this.last_payload) {
+                throw new Error('No signed payloads, message truncated?');
             }
         } catch (err) {
             return callback(err);

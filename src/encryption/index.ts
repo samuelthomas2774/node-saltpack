@@ -285,6 +285,10 @@ export class DecryptStream extends Transform {
 
                 this.push(this.last_payload.decrypt(this.header, this.recipient, this.payload_key, this.payload_index));
             }
+
+            if (!this.last_payload) {
+                throw new Error('No encrypted payloads, message truncated?');
+            }
         } catch (err) {
             return callback(err);
         }
