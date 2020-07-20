@@ -1,0 +1,38 @@
+image: node:12
+
+cache:
+    paths:
+        - node_modules/
+
+build:
+    stage: build
+    script:
+        - npm --color="always" install
+        - npx tsc
+        - PACKAGE=`npm --color="always" pack`
+        - mv "$PACKAGE" saltpack.tgz
+    artifacts:
+        paths:
+            - dist
+            - saltpack.tgz
+
+test-10:
+    image: node:10
+    script:
+        - npm run test
+    dependencies:
+        - build
+
+test-12:
+    image: node:12
+    script:
+        - npm run test
+    dependencies:
+        - build
+
+test-14:
+    image: node:14
+    script:
+        - npm run test
+    dependencies:
+        - build
