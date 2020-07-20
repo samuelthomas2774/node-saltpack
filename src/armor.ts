@@ -225,13 +225,13 @@ export class ArmorStream extends Transform {
 
 export interface DearmorResult extends Buffer {
     /** Any remaining data after the first armored data */
-    remaining: Buffer | null;
+    remaining: Buffer;
     /** The message type and app name included in the header+footer */
     header_info: ArmorHeaderInfo;
 }
 export interface RawDearmorResult extends Buffer {
     /** Any remaining data after the first armored data */
-    remaining: Buffer | null;
+    remaining: null;
     /** The message type and app name included in the header+footer */
     header_info: null;
 }
@@ -245,14 +245,12 @@ export interface ArmorHeaderInfo {
 /**
  * Decode the ascii-armored data from the specified +input_chars+ using the given +options+.
  */
-export function dearmor(input: Uint8Array | string, options: Partial<Options> & {raw: true}): RawDearmorResult
-export function dearmor(input: Uint8Array | string, options?: Partial<Options> & {
+export function dearmor(input: string, options: Partial<Options> & {raw: true}): RawDearmorResult
+export function dearmor(input: string, options?: Partial<Options> & {
     raw: false | null | undefined;
 }): DearmorResult
-export function dearmor(input: Uint8Array | string, options?: Partial<Options>): DearmorResult | RawDearmorResult
-export function dearmor(_input: Uint8Array | string, _options?: Partial<Options>): DearmorResult | RawDearmorResult {
-    let input = _input instanceof Buffer ? _input.toString() :
-        _input instanceof Uint8Array ? Buffer.from(_input).toString() : _input;
+export function dearmor(input: string, options?: Partial<Options>): DearmorResult | RawDearmorResult
+export function dearmor(input: string, _options?: Partial<Options>): DearmorResult | RawDearmorResult {
     const options = Object.assign({}, DEFAULT_OPTIONS, _options);
     let header, header_info: ArmorHeaderInfo | null = null, footer, remaining = null, match;
 
@@ -282,13 +280,11 @@ export function dearmor(_input: Uint8Array | string, _options?: Partial<Options>
     input = input.replace(/[>\n\r\t ]/g, '');
     const chunks = chunkString(input, options.char_block_size);
 
-    let output = Buffer.alloc(0);
-    for (const chunk of chunks) {
-        output = Buffer.concat([output, decodeBlock(chunk, options.alphabet, options.shift)]);
-    }
+    const output_chunks = chunks.map(chunk => decodeBlock(chunk, options.alphabet, options.shift));
+    const output = Buffer.concat(output_chunks);
 
     return Object.assign(output, {
-        remaining,
+        remaining: remaining!,
         header_info: header_info!,
     });
 }
@@ -480,8 +476,9 @@ export function decodeBlock(chars_block: string, alphabet: Alphabet = BASE62_ALP
     if (shift) {
         // TODO
     }
-    
-    return Buffer.from(bytes_int.toString(16), 'hex');
+
+    return Buffer.from(bytes_int.toString(16)
+        .padStart(bytes_size * 2, '0').slice(0, bytes_size * 2), 'hex');
 }
 
 export function efficientCharsSizes(alphabet_size: number, chars_size_upper_bound = 50) {

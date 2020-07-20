@@ -58,8 +58,8 @@ test('decrypt stream', async () => {
         stream.end(ENCRYPTED);
     });
 
-    expect(stream.sender_public_key).toStrictEqual(Buffer.from(KEYPAIR_ALICE.publicKey));
     expect(result.toString()).toBe(INPUT_STRING);
+    expect(stream.sender_public_key).toStrictEqual(Buffer.from(KEYPAIR_ALICE.publicKey));
 });
 
 test('decrypt with wrong keypair fails', async () => {
