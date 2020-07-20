@@ -39,11 +39,11 @@ export class MultiTransform extends Transform {
     }
 
     _transform(data: any, encoding: string, callback: TransformCallback) {
-        this.pump.write(data, encoding, callback);
+        this.streams[0].write(data, encoding, callback);
     }
 
     _flush(callback: TransformCallback) {
-        this.pump.end(callback);
+        this.streams[0].end(callback);
     }
 }
 
