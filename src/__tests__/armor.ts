@@ -14,8 +14,8 @@ test('round trip', () => {
     const decoded = dearmor(encoded);
 
     expect(decoded.toString()).toBe(INPUT_STRING);
-    expect(decoded.header_info!.message_type).toBe('MESSAGE');
-    expect(decoded.header_info!.app_name).toBe(null);
+    expect(decoded.header_info.message_type).toBe('MESSAGE');
+    expect(decoded.header_info.app_name).toBe(null);
 });
 
 test('round trip in raw format', () => {

@@ -42,8 +42,8 @@ test('encrypt stream', async () => {
 test('decrypt', async () => {
     const data = await decrypt(ENCRYPTED, KEYPAIR_BOB);
 
-    expect(data.sender_public_key).toStrictEqual(Buffer.from(KEYPAIR_ALICE.publicKey));
     expect(data.toString()).toBe(INPUT_STRING);
+    expect(data.sender_public_key).toStrictEqual(Buffer.from(KEYPAIR_ALICE.publicKey));
 });
 
 test('decrypt stream', async () => {

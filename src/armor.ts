@@ -1,5 +1,6 @@
 
 import {MessageType as Mode} from './message-header';
+import {chunkBuffer, chunkString} from './util';
 import {Transform, TransformCallback} from 'stream';
 import chunk = require('lodash.chunk');
 
@@ -98,11 +99,10 @@ function extraBits(alphabet_size: number, chars_size: number, bytes_size: number
  */
 export function armor(input: Uint8Array | string, options?: Partial<Options>): string
 export function armor(input: Uint8Array | string, _options?: Partial<Options>) {
-    if (!(input instanceof Buffer)) input = Buffer.from(input);
     const options = Object.assign({}, DEFAULT_OPTIONS, _options) as Options;
     if (typeof options.message_type === 'number') options.message_type = modeToStringType(options.message_type);
 
-    const chunks = chunk(input, options.block_size).map(c => Buffer.from(c));
+    const chunks = chunkBuffer(input, options.block_size);
 
     let output = '';
     for (const chunk of chunks) {
@@ -110,11 +110,11 @@ export function armor(input: Uint8Array | string, _options?: Partial<Options>) {
     }
 
     if (options.raw) {
-        const out_chunks = chunk(output, 43).map(c => c.reduce((p, c) => p + c));
+        const out_chunks = chunkString(output, 43);
         return out_chunks.join(' ');
     }
 
-    const word_chunks = chunk(output, 15).map(c => c.reduce((p, c) => p + c));
+    const word_chunks = chunkString(output, 15);
     const sentences = chunk(word_chunks, 200);
 
     const joined = sentences.map(words => words.join(' ')).join('\n');
@@ -133,6 +133,7 @@ export class ArmorStream extends Transform {
     readonly armor_header: string;
     readonly armor_footer: string;
     private words = 0;
+    private i = 0;
 
     constructor(options?: Partial<Options>) {
         super();
@@ -152,7 +153,7 @@ export class ArmorStream extends Transform {
     }
 
     _transform(data: Buffer, encoding: string, callback: TransformCallback) {
-        if (debug) console.log('Processing chunk #d: %s', -1, data);
+        if (debug) console.log('Processing chunk #%d: %O', this.i++, data);
 
         this.in_buffer = Buffer.concat([this.in_buffer, data]);
 
@@ -226,7 +227,13 @@ export interface DearmorResult extends Buffer {
     /** Any remaining data after the first armored data */
     remaining: Buffer | null;
     /** The message type and app name included in the header+footer */
-    header_info: ArmorHeaderInfo | null;
+    header_info: ArmorHeaderInfo;
+}
+export interface RawDearmorResult extends Buffer {
+    /** Any remaining data after the first armored data */
+    remaining: Buffer | null;
+    /** The message type and app name included in the header+footer */
+    header_info: null;
 }
 export interface ArmorHeaderInfo {
     /** The message type from the header+footer */
@@ -238,10 +245,14 @@ export interface ArmorHeaderInfo {
 /**
  * Decode the ascii-armored data from the specified +input_chars+ using the given +options+.
  */
-export function dearmor(input: Uint8Array | string, options?: Partial<Options>): DearmorResult
-export function dearmor(input: Uint8Array | string, _options?: Partial<Options>): DearmorResult {
-    if (input instanceof Buffer) input = input.toString();
-    if (input instanceof Uint8Array) input = Buffer.from(input).toString();
+export function dearmor(input: Uint8Array | string, options: Partial<Options> & {raw: true}): RawDearmorResult
+export function dearmor(input: Uint8Array | string, options?: Partial<Options> & {
+    raw: false | null | undefined;
+}): DearmorResult
+export function dearmor(input: Uint8Array | string, options?: Partial<Options>): DearmorResult | RawDearmorResult
+export function dearmor(_input: Uint8Array | string, _options?: Partial<Options>): DearmorResult | RawDearmorResult {
+    let input = _input instanceof Buffer ? _input.toString() :
+        _input instanceof Uint8Array ? Buffer.from(_input).toString() : _input;
     const options = Object.assign({}, DEFAULT_OPTIONS, _options);
     let header, header_info: ArmorHeaderInfo | null = null, footer, remaining = null, match;
 
@@ -267,8 +278,9 @@ export function dearmor(input: Uint8Array | string, _options?: Partial<Options>)
             throw new Error('Footer doesn\'t match header');
         }
     }
+
     input = input.replace(/[>\n\r\t ]/g, '');
-    const chunks = chunk(input, options.char_block_size).map(c => c.reduce((p, c) => p + c));
+    const chunks = chunkString(input, options.char_block_size);
 
     let output = Buffer.alloc(0);
     for (const chunk of chunks) {
@@ -277,7 +289,7 @@ export function dearmor(input: Uint8Array | string, _options?: Partial<Options>)
 
     return Object.assign(output, {
         remaining,
-        header_info,
+        header_info: header_info!,
     });
 }
 
@@ -289,14 +301,21 @@ export class DearmorStream extends Transform {
     private armor_header: string | null = null;
     private armor_footer: string | null = null;
     private words = 0;
+    private i = 0;
 
     get header() {
+        if (this.armor_options.raw) throw new Error('Header isn\'t available when decoding raw armored data');
+        if (!this.armor_header) throw new Error('Header hasn\'t been decoded yet');
         return this.armor_header;
     }
     get footer() {
+        if (this.armor_options.raw) throw new Error('Footer isn\'t available when decoding raw armored data');
+        if (!this.armor_footer) throw new Error('Footer hasn\'t been decoded yet');
         return this.armor_footer;
     }
     get info() {
+        if (this.armor_options.raw) throw new Error('Header isn\'t available when decoding raw armored data');
+        if (!this.armor_header_info) throw new Error('Header hasn\'t been decoded yet');
         return this.armor_header_info;
     }
 
@@ -306,7 +325,7 @@ export class DearmorStream extends Transform {
     }
 
     _transform(data: Buffer, encoding: string, callback: TransformCallback) {
-        if (debug) console.log('Processing chunk #d: %s', -1, data);
+        if (debug) console.log('Processing chunk #%d: %O', this.i++, data);
 
         if (!this.armor_options.raw && this.armor_header === null) {
             this.in_buffer = Buffer.concat([this.in_buffer, data]);
