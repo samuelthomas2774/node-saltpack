@@ -436,9 +436,7 @@ export function encodeBlock(bytes_block: Buffer, alphabet: Alphabet = BASE62_ALP
     let bytes_int = BigInt('0x' + bytes_block.toString('hex'));
 
     if (shift) {
-        let n = 1;
-        for (let i = 0; i > extra; i++) n = n * 2;
-        bytes_int = bytes_int * BigInt(n);
+        bytes_int <<= BigInt(extra);
     }
 
     const alphabet_size = BigInt(alphabet.length);
@@ -474,7 +472,7 @@ export function decodeBlock(chars_block: string, alphabet: Alphabet = BASE62_ALP
     }
 
     if (shift) {
-        // TODO
+        bytes_int >>= BigInt(extra);
     }
 
     return Buffer.from(bytes_int.toString(16)
