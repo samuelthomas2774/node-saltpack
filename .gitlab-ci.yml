@@ -4,10 +4,12 @@ cache:
     paths:
         - node_modules/
 
+before_script:
+    - npm --color="always" install
+
 build:
     stage: build
     script:
-        - npm --color="always" install
         - npx tsc
         - PACKAGE=`npm --color="always" pack`
         - mv "$PACKAGE" saltpack.tgz
