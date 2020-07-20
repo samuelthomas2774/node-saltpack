@@ -71,22 +71,22 @@ export class EncryptStream extends Transform {
 
         // 1. Generate a random 32-byte payload key.
         this.payload_key = debug_fix_key ?? crypto.randomBytes(32);
-    
+
         // 2. Generate a random ephemeral keypair, using crypto_box_keypair.
         this.ephemeral_keypair = debug_fix_keypair ?? tweetnacl.box.keyPair();
 
         this.keypair = keypair ?? this.ephemeral_keypair;
-    
+
         const recipients = recipients_keys.map((key, index) => {
             return EncryptedMessageRecipient.create(key, this.ephemeral_keypair.secretKey, this.payload_key, index);
         });
-    
+
         this.header = EncryptedMessageHeader.create(
             this.ephemeral_keypair.publicKey, this.payload_key, this.keypair.publicKey, recipients
         );
 
         this.push(this.header.encoded);
-    
+
         for (const recipient of recipients) {
             recipient.generateMacKeyForSender(
                 this.header.hash, this.ephemeral_keypair.secretKey, this.keypair.secretKey
@@ -282,7 +282,7 @@ export class DecryptStream extends Transform {
                 if (!this.last_payload.final) {
                     throw new Error('Found payload with invalid final flag, message truncated?');
                 }
-        
+
                 this.push(this.last_payload.decrypt(this.header, this.recipient, this.payload_key, this.payload_index));
             }
         } catch (err) {

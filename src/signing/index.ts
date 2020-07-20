@@ -201,7 +201,7 @@ export class VerifyStream extends Transform {
                 if (!this.last_payload.final) {
                     throw new Error('Found payload with invalid final flag, message truncated?');
                 }
-        
+
                 this.push(this.last_payload.data);
             }
         } catch (err) {
