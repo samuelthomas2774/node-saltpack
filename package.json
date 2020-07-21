@@ -1,6 +1,6 @@
 {
     "name": "@samuelthomas2774/saltpack",
-    "version": "0.2.0",
+    "version": "0.2.1",
     "description": "Node.js implementation of Saltpack.",
     "keywords": [
         "saltpack",
@@ -15,7 +15,7 @@
     "types": "dist/index.d.ts",
     "repository": {
         "type": "git",
-        "url": "https://gitlab.fancy.org.uk/hap-server/hap-server.git"
+        "url": "https://gitlab.fancy.org.uk/samuel/node-saltpack.git"
     },
     "files": [
         "dist",
