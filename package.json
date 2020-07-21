@@ -1,12 +1,30 @@
 {
-    "name": "saltpack",
+    "name": "@samuelthomas2774/saltpack",
     "version": "0.1.0",
+    "description": "Node.js implementation of Saltpack.",
+    "keywords": [
+        "saltpack",
+        "keybase"
+    ],
+    "license": "MIT",
+    "author": {
+        "name": "Samuel Elliott",
+        "url": "https://samuelthomas2774.github.io"
+    },
     "main": "dist/index.js",
+    "types": "dist/index.d.ts",
+    "repository": {
+        "type": "git",
+        "url": "https://gitlab.fancy.org.uk/hap-server/hap-server.git"
+    },
     "files": [
         "dist",
         "!dist/**/*.map",
         "!dist/__tests__"
     ],
+    "engines": {
+        "node": "^10.0.0 || ^12.0.0 || ^14.0.0"
+    },
     "dependencies": {
         "@msgpack/msgpack": "^1.12.2",
         "lodash.chunk": "^4.2.0",
@@ -23,5 +41,8 @@
     },
     "scripts": {
         "test": "jest dist/__tests__/**.js --color --verbose"
+    },
+    "publishConfig": {
+        "access": "public"
     }
 }
