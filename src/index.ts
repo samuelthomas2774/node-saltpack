@@ -34,6 +34,16 @@ export {
 } from './signing';
 
 export {
+    signcrypt,
+    SigncryptStream,
+
+    designcrypt,
+    DesigncryptStream,
+
+    DesigncryptResult,
+} from './signcryption';
+
+export {
     encryptAndArmor,
     dearmorAndDecrypt,
     DearmorAndDecryptResult,

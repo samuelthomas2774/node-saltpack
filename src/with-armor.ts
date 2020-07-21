@@ -1,6 +1,7 @@
 
 import {encrypt, decrypt, EncryptStream, DecryptStream, DecryptResult} from './encryption';
 import {sign, verify, SignStream, VerifyStream, signDetached, verifyDetached} from './signing';
+import {signcrypt, designcrypt, SigncryptStream, DesigncryptStream, DesigncryptResult} from './signcryption';
 import {
     armor, dearmor, ArmorStream, DearmorStream, Options as ArmorOptions, MessageType, ArmorHeaderInfo, DearmorResult,
 } from './armor';
@@ -121,4 +122,56 @@ export async function verifyDetachedArmored(
 export interface DearmorAndVerifyDetachedResult {
     remaining: Buffer;
     header_info: ArmorHeaderInfo;
+}
+
+export async function signcryptAndArmor(
+    data: Uint8Array | string, keypair: tweetnacl.BoxKeyPair | null, recipients_keys: Uint8Array[]
+) {
+    const encrypted = await signcrypt(data, keypair, recipients_keys);
+    return armor(encrypted, {message_type: MessageType.ENCRYPTED_MESSAGE});
+}
+export async function dearmorAndDesigncrypt(
+    encrypted: string, keypair: tweetnacl.BoxKeyPair
+): Promise<DearmorAndDesigncryptResult> {
+    const dearmored = dearmor(encrypted);
+    return Object.assign(await designcrypt(dearmored, keypair), {
+        remaining: dearmored.remaining,
+        header_info: dearmored.header_info,
+    });
+}
+
+export type DearmorAndDesigncryptResult = DearmorResult & DesigncryptResult;
+
+export class SigncryptAndArmorStream extends Pumpify {
+    constructor(
+        keypair: tweetnacl.BoxKeyPair | null, recipients_keys: Uint8Array[], armor_options?: Partial<ArmorOptions>
+    ) {
+        const encrypt = new SigncryptStream(keypair, recipients_keys);
+        const armor = new ArmorStream(Object.assign({
+            message_type: MessageType.ENCRYPTED_MESSAGE,
+        }, armor_options));
+
+        super(encrypt, armor);
+    }
+}
+export class DearmorAndDesigncryptStream extends Pumpify {
+    readonly dearmor: DearmorStream;
+    readonly decrypt: DesigncryptStream;
+
+    constructor(keypair: tweetnacl.BoxKeyPair, armor_options?: Partial<ArmorOptions>) {
+        const dearmor = new DearmorStream(armor_options);
+        const decrypt = new DesigncryptStream(keypair);
+
+        super(dearmor, decrypt);
+
+        this.dearmor = dearmor;
+        this.decrypt = decrypt;
+    }
+
+    get info(): ArmorHeaderInfo {
+        return this.dearmor.info;
+    }
+    get sender_public_key(): Uint8Array | null {
+        return this.decrypt.sender_public_key;
+    }
 }

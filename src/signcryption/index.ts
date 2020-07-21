@@ -142,11 +142,11 @@ export class SigncryptStream extends Transform {
     }
 }
 
-export interface DecryptResult extends Buffer {
+export interface DesigncryptResult extends Buffer {
     sender_public_key: Uint8Array | null;
 }
 
-export async function designcrypt(signcrypted: Uint8Array, keypair: tweetnacl.BoxKeyPair): Promise<DecryptResult> {
+export async function designcrypt(signcrypted: Uint8Array, keypair: tweetnacl.BoxKeyPair): Promise<DesigncryptResult> {
     const stream = new Readable();
     stream.push(signcrypted);
     stream.push(null);
