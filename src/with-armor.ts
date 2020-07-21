@@ -54,7 +54,7 @@ export class DearmorAndDecryptStream extends Pumpify {
     get info(): ArmorHeaderInfo {
         return this.dearmor.info;
     }
-    get sender_public_key(): Buffer {
+    get sender_public_key(): Uint8Array {
         return this.decrypt.sender_public_key;
     }
 }

@@ -43,7 +43,7 @@ test('decrypt', async () => {
     const data = await decrypt(ENCRYPTED, KEYPAIR_BOB);
 
     expect(data.toString()).toBe(INPUT_STRING);
-    expect(data.sender_public_key).toStrictEqual(Buffer.from(KEYPAIR_ALICE.publicKey));
+    expect(data.sender_public_key).toStrictEqual(KEYPAIR_ALICE.publicKey);
 });
 
 test('decrypt stream', async () => {
@@ -59,7 +59,7 @@ test('decrypt stream', async () => {
     });
 
     expect(result.toString()).toBe(INPUT_STRING);
-    expect(stream.sender_public_key).toStrictEqual(Buffer.from(KEYPAIR_ALICE.publicKey));
+    expect(stream.sender_public_key).toStrictEqual(KEYPAIR_ALICE.publicKey);
 });
 
 test('decrypt with wrong keypair fails', async () => {

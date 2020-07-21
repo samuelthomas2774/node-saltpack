@@ -80,13 +80,6 @@ export default class EncryptedMessagePayload {
         return EncryptedMessagePayload.encodePayload(this.final, this.authenticators, this.payload_secretbox);
     }
 
-    /**
-     * @param int $mode
-     * @param string $public_key
-     * @param string $sender
-     * @param string[] $authenticators
-     * @return [string, string]
-     */
     static encodePayload(final: boolean, authenticators: Uint8Array[], payload_secretbox: Uint8Array): Buffer {
         const data = [
             final,
@@ -107,7 +100,9 @@ export default class EncryptedMessagePayload {
         return new this(final, authenticators, payload_secretbox);
     }
 
-    decrypt(header: EncryptedMessageHeader, recipient: EncryptedMessageRecipient, payload_key: Buffer, index: bigint) {
+    decrypt(
+        header: EncryptedMessageHeader, recipient: EncryptedMessageRecipient, payload_key: Uint8Array, index: bigint
+    ) {
         if (!recipient.mac_key) {
             throw new Error('Recipient doesn\'t have a MAC key set');
         }

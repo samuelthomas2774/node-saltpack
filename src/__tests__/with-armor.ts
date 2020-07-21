@@ -60,7 +60,7 @@ test('dearmoring and decryption', async () => {
     const decrypted = await dearmorAndDecrypt(encrypted, KEYPAIR_BOB);
 
     expect(decrypted.toString()).toBe(INPUT_STRING);
-    expect(decrypted.sender_public_key).toStrictEqual(Buffer.from(KEYPAIR_ALICE.publicKey));
+    expect(decrypted.sender_public_key).toStrictEqual(KEYPAIR_ALICE.publicKey);
 });
 
 test('streaming dearmoring and decryption', async () => {
@@ -80,7 +80,7 @@ test('streaming dearmoring and decryption', async () => {
     expect(result.join('')).toBe(INPUT_STRING);
     expect(stream.info.message_type).toBe(MessageType.ENCRYPTED_MESSAGE);
     expect(stream.info.app_name).toBe(null);
-    expect(stream.sender_public_key).toStrictEqual(Buffer.from(KEYPAIR_ALICE.publicKey));
+    expect(stream.sender_public_key).toStrictEqual(KEYPAIR_ALICE.publicKey);
 });
 
 test('dearmor and decrypt with wrong keypair fails', async () => {

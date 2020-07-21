@@ -148,7 +148,7 @@ export class EncryptStream extends Transform {
 }
 
 export interface DecryptResult extends Buffer {
-    sender_public_key: Buffer | null;
+    sender_public_key: Uint8Array | null;
 }
 
 export async function decrypt(encrypted: Uint8Array, keypair: tweetnacl.BoxKeyPair): Promise<DecryptResult> {
@@ -198,7 +198,7 @@ export async function decrypt(encrypted: Uint8Array, keypair: tweetnacl.BoxKeyPa
 
 export class DecryptStream extends Transform {
     private decoder = new msgpack.Decoder(undefined!, undefined);
-    private header_data: [EncryptedMessageHeader, Buffer, EncryptedMessageRecipient, Buffer] | null = null;
+    private header_data: [EncryptedMessageHeader, Uint8Array, EncryptedMessageRecipient, Uint8Array] | null = null;
     private last_payload: EncryptedMessagePayload | null = null;
     private payload_index = BigInt(-1);
     private i = 0;

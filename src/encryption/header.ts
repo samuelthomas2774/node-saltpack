@@ -103,7 +103,7 @@ export default class EncryptedMessageHeader extends Header {
     /**
      * Decrypts and returns the payload key and recipient.
      */
-    decryptPayloadKey(keypair: tweetnacl.BoxKeyPair): [Buffer, EncryptedMessageRecipient] {
+    decryptPayloadKey(keypair: tweetnacl.BoxKeyPair): [Uint8Array, EncryptedMessageRecipient] {
         // 5. Precompute the ephemeral shared secret using crypto_box_beforenm with the ephemeral public key and
         // the recipient's private key.
         const shared_secret = tweetnacl.box.before(this.public_key, keypair.secretKey);
@@ -131,7 +131,7 @@ export default class EncryptedMessageHeader extends Header {
         throw new Error('keypair is not an intended recipient');
     }
 
-    decryptSender(payload_key: Buffer): Buffer {
+    decryptSender(payload_key: Uint8Array): Uint8Array {
         const sender_public_key = tweetnacl.secretbox.open(
             this.sender_secretbox, EncryptedMessageHeader.SENDER_KEY_SECRETBOX_NONCE, payload_key
         );
@@ -140,6 +140,6 @@ export default class EncryptedMessageHeader extends Header {
             throw new Error('Failed to decrypt sender public key');
         }
 
-        return Buffer.from(sender_public_key);
+        return sender_public_key;
     }
 }

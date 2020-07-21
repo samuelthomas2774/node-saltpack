@@ -65,7 +65,7 @@ export default class EncryptedMessageRecipient {
      */
     decryptPayloadKey(
         ephemeral_public_key: Uint8Array, recipient_private_key: Uint8Array, secret: Uint8Array | null = null
-    ): Buffer | null {
+    ): Uint8Array | null {
         const payload_key = secret ? tweetnacl.box.open.after(
             this.encrypted_payload_key, this.recipient_index, secret
         ) : tweetnacl.box.open(
@@ -74,7 +74,7 @@ export default class EncryptedMessageRecipient {
 
         if (!payload_key) return null;
 
-        return Buffer.from(payload_key);
+        return payload_key;
     }
 
     generateMacKeyForSender(
