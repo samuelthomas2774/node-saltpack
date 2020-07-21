@@ -18,14 +18,14 @@ export default class SignedMessageHeader extends Header {
     static debug_fix_nonce: Buffer | null = null;
 
     /** The sender's Ed25519 public key */
-    readonly public_key: Buffer;
+    readonly public_key: Uint8Array;
     /** Random data for this message */
-    readonly nonce: Buffer;
+    readonly nonce: Uint8Array;
     /** `true` if this is an attached signature header, `false` if this is a detached signature header */
     readonly attached: boolean;
     private _encoded_data: [Buffer, Buffer] | null = null;
 
-    constructor(public_key: Buffer, nonce: Buffer, attached = true) {
+    constructor(public_key: Uint8Array, nonce: Uint8Array, attached = true) {
         super();
         this.public_key = public_key;
         this.nonce = nonce;
@@ -50,14 +50,14 @@ export default class SignedMessageHeader extends Header {
     static create(public_key: Uint8Array, attached = true): SignedMessageHeader {
         const nonce = this.debug_fix_nonce ?? crypto.randomBytes(32);
 
-        return new this(Buffer.from(public_key), nonce, attached);
+        return new this(public_key, nonce, attached);
     }
 
     encode() {
         return SignedMessageHeader.encodeHeader(this.public_key, this.nonce, this.attached);
     }
 
-    static encodeHeader(public_key: Buffer, nonce: Buffer, attached: boolean): [Buffer, Buffer] {
+    static encodeHeader(public_key: Uint8Array, nonce: Uint8Array, attached: boolean): [Buffer, Buffer] {
         const data = [
             'saltpack',
             [2, 0],
@@ -73,7 +73,7 @@ export default class SignedMessageHeader extends Header {
         return [header_hash, Buffer.from(msgpack.encode(encoded))];
     }
 
-    static decode(encoded: Buffer, unwrapped = false) {
+    static decode(encoded: Uint8Array, unwrapped = false) {
         const [header_hash, data] = super.decode1(encoded, unwrapped);
 
         if (data[2] !== MessageType.ATTACHED_SIGNING &&

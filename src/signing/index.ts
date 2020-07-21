@@ -96,7 +96,11 @@ export class SignStream extends Transform {
     }
 }
 
-export async function verify(signed: Uint8Array, public_key: Uint8Array): Promise<Buffer> {
+export interface VerifyResult extends Buffer {
+    public_key: Uint8Array;
+}
+
+export async function verify(signed: Uint8Array, public_key?: Uint8Array | null): Promise<VerifyResult> {
     const stream = new Readable();
     stream.push(signed);
     stream.push(null);
@@ -110,6 +114,10 @@ export async function verify(signed: Uint8Array, public_key: Uint8Array): Promis
     const header_data = items.shift() as any;
     const header = SignedMessageHeader.decode(header_data, true);
 
+    if (public_key && !Buffer.from(header.public_key).equals(public_key)) {
+        throw new Error('Sender public key doesn\'t match');
+    }
+
     let output = Buffer.alloc(0);
 
     for (const i in items) {
@@ -117,7 +125,7 @@ export async function verify(signed: Uint8Array, public_key: Uint8Array): Promis
         const final = items.length === (parseInt(i) + 1);
 
         const payload = SignedMessagePayload.decode(message, true);
-        payload.verify(header, public_key, BigInt(i));
+        payload.verify(header, header.public_key, BigInt(i));
 
         if (payload.final && !final) {
             throw new Error('Found payload with invalid final flag, message extended?');
@@ -133,23 +141,31 @@ export async function verify(signed: Uint8Array, public_key: Uint8Array): Promis
         throw new Error('No signed payloads, message truncated?');
     }
 
-    return output;
+    return Object.assign(output, {
+        public_key: new Uint8Array(header.public_key),
+    });
 }
 
 export class VerifyStream extends Transform {
+    private readonly _public_key: Uint8Array | null;
     private decoder = new msgpack.Decoder(undefined!, undefined);
     private header_data: SignedMessageHeader | null = null;
     private last_payload: SignedMessagePayload | null = null;
     private payload_index = BigInt(-1);
     private i = 0;
 
-    constructor(readonly public_key: Uint8Array) {
+    constructor(public_key?: Uint8Array | null) {
         super();
+
+        this._public_key = public_key ?? null;
     }
 
     get header() {
         if (!this.header_data) throw new Error('Header hasn\'t been decoded yet');
         return this.header_data;
+    }
+    get public_key() {
+        return this.header.public_key;
     }
 
     _transform(data: Buffer, encoding: string, callback: TransformCallback) {
@@ -178,22 +194,26 @@ export class VerifyStream extends Transform {
         if (!this.header_data) {
             const header = SignedMessageHeader.decode(data as any, true);
 
+            if (this._public_key && !Buffer.from(header.public_key).equals(this._public_key)) {
+                throw new Error('Sender public key doesn\'t match');
+            }
+
             this.header_data = header;
+            // @ts-expect-error
+            header.public_key = new Uint8Array(header.public_key);
         } else {
             this.payload_index++;
 
             if (this.last_payload) {
                 if (this.last_payload.final) {
-                    const err = new Error('Found payload with invalid final flag, message extended?');
-                    this.emit('error', err);
-                    throw err;
+                    throw new Error('Found payload with invalid final flag, message extended?');
                 }
 
                 this.push(this.last_payload.data);
             }
 
             const payload = SignedMessagePayload.decode(data, true);
-            payload.verify(this.header, this.public_key, this.payload_index);
+            payload.verify(this.header, this.header.public_key, this.payload_index);
 
             this.last_payload = payload;
         }
@@ -229,7 +249,13 @@ export function signDetached(data: Uint8Array | string, keypair: tweetnacl.SignK
     ]);
 }
 
-export async function verifyDetached(signature: Uint8Array, data: Uint8Array | string, public_key: Uint8Array) {
+export interface VerifyDetachedResult {
+    public_key: Uint8Array;
+}
+
+export async function verifyDetached(
+    signature: Uint8Array, data: Uint8Array | string, public_key?: Uint8Array | null
+): Promise<VerifyDetachedResult> {
     const stream = new Readable();
     stream.push(signature);
     stream.push(null);
@@ -244,5 +270,13 @@ export async function verifyDetached(signature: Uint8Array, data: Uint8Array | s
 
     const header = SignedMessageHeader.decode(header_data, true);
 
-    header.verifyDetached(signature_data, Buffer.from(data), public_key);
+    if (public_key && !Buffer.from(header.public_key).equals(public_key)) {
+        throw new Error('Sender public key doesn\'t match');
+    }
+
+    header.verifyDetached(signature_data, Buffer.from(data), header.public_key);
+
+    return {
+        public_key: new Uint8Array(header.public_key),
+    };
 }

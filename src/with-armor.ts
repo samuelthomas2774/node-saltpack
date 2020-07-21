@@ -1,6 +1,8 @@
 
 import {encrypt, decrypt, EncryptStream, DecryptStream, DecryptResult} from './encryption';
-import {sign, verify, SignStream, VerifyStream, signDetached, verifyDetached} from './signing';
+import {
+    sign, verify, SignStream, VerifyStream, VerifyResult, signDetached, verifyDetached, VerifyDetachedResult,
+} from './signing';
 import {signcrypt, designcrypt, SigncryptStream, DesigncryptStream, DesigncryptResult} from './signcryption';
 import {
     armor, dearmor, ArmorStream, DearmorStream, Options as ArmorOptions, MessageType, ArmorHeaderInfo, DearmorResult,
@@ -72,7 +74,7 @@ export async function verifyArmored(signed: string, public_key: Uint8Array): Pro
     });
 }
 
-export type DearmorAndVerifyResult = DearmorResult & Buffer;
+export type DearmorAndVerifyResult = DearmorResult & VerifyResult;
 
 export class SignAndArmorStream extends Pumpify {
     constructor(keypair: tweetnacl.SignKeyPair, armor_options?: Partial<ArmorOptions>) {
@@ -88,7 +90,7 @@ export class DearmorAndVerifyStream extends Pumpify {
     readonly dearmor: DearmorStream;
     readonly verify: VerifyStream;
 
-    constructor(public_key: Uint8Array, armor_options?: Partial<ArmorOptions>) {
+    constructor(public_key?: Uint8Array | null, armor_options?: Partial<ArmorOptions>) {
         const dearmor = new DearmorStream(armor_options);
         const verify = new VerifyStream(public_key);
 
@@ -101,6 +103,9 @@ export class DearmorAndVerifyStream extends Pumpify {
     get info(): ArmorHeaderInfo {
         return this.dearmor.info;
     }
+    get public_key(): Uint8Array {
+        return this.verify.public_key;
+    }
 }
 
 export async function signDetachedAndArmor(data: Uint8Array | string, keypair: tweetnacl.SignKeyPair) {
@@ -111,15 +116,16 @@ export async function verifyDetachedArmored(
     signed: string, data: Uint8Array | string, public_key: Uint8Array
 ): Promise<DearmorAndVerifyDetachedResult> {
     const dearmored = dearmor(signed);
-    await verifyDetached(dearmored, data, public_key);
+    const result = await verifyDetached(dearmored, data, public_key);
 
     return {
         remaining: dearmored.remaining,
         header_info: dearmored.header_info,
+        public_key: result.public_key,
     };
 }
 
-export interface DearmorAndVerifyDetachedResult {
+export interface DearmorAndVerifyDetachedResult extends VerifyDetachedResult {
     remaining: Buffer;
     header_info: ArmorHeaderInfo;
 }
