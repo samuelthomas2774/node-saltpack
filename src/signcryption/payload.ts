@@ -129,7 +129,7 @@ export default class SigncryptedMessagePayload {
 
         // 3. Take the first 64 bytes of the plaintext as the detached signature, and the rest as the payload chunk.
         const data = signature_data.slice(64);
-        
+
         if (public_key) {
             const signature = signature_data.slice(0, 64);
 
