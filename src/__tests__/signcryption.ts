@@ -43,6 +43,13 @@ test('encrypt stream', async () => {
 });
 
 test('decrypt', async () => {
+    const data = await designcrypt(SIGNCRYPTED, KEYPAIR_BOB, KEYPAIR_ALICE.publicKey);
+
+    expect(data.toString()).toBe(INPUT_STRING);
+    expect(data.sender_public_key).toStrictEqual(KEYPAIR_ALICE.publicKey);
+});
+
+test('decrypt doesn\'t require sender public key', async () => {
     const data = await designcrypt(SIGNCRYPTED, KEYPAIR_BOB);
 
     expect(data.toString()).toBe(INPUT_STRING);
@@ -50,6 +57,22 @@ test('decrypt', async () => {
 });
 
 test('decrypt stream', async () => {
+    const stream = new DesigncryptStream(KEYPAIR_BOB, KEYPAIR_ALICE.publicKey);
+    const result: Buffer[] = [];
+
+    await new Promise((rs, rj) => {
+        stream.on('error', rj);
+        stream.on('end', rs);
+        stream.on('data', chunk => result.push(chunk));
+
+        stream.end(SIGNCRYPTED);
+    });
+
+    expect(result.toString()).toBe(INPUT_STRING);
+    expect(stream.sender_public_key).toStrictEqual(KEYPAIR_ALICE.publicKey);
+});
+
+test('decrypt stream doesn\'t require sender public key', async () => {
     const stream = new DesigncryptStream(KEYPAIR_BOB);
     const result: Buffer[] = [];
 

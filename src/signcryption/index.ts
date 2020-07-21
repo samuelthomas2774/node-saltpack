@@ -146,7 +146,9 @@ export interface DesigncryptResult extends Buffer {
     sender_public_key: Uint8Array | null;
 }
 
-export async function designcrypt(signcrypted: Uint8Array, keypair: tweetnacl.BoxKeyPair): Promise<DesigncryptResult> {
+export async function designcrypt(
+    signcrypted: Uint8Array, keypair: tweetnacl.BoxKeyPair, sender?: Uint8Array | null
+): Promise<DesigncryptResult> {
     const stream = new Readable();
     stream.push(signcrypted);
     stream.push(null);
@@ -166,6 +168,10 @@ export async function designcrypt(signcrypted: Uint8Array, keypair: tweetnacl.Bo
     const [payload_key, recipient] = payload_key_and_recipient;
     const sender_public_key = header.decryptSender(payload_key);
 
+    if (sender && (!sender_public_key || !Buffer.from(sender_public_key).equals(sender))) {
+        throw new Error('Sender public key doesn\'t match');
+    }
+
     let output = Buffer.alloc(0);
 
     for (const i in items) {
@@ -184,7 +190,7 @@ export async function designcrypt(signcrypted: Uint8Array, keypair: tweetnacl.Bo
     }
 
     if (!items.length) {
-        throw new Error('No encrypted payloads, message truncated?');
+        throw new Error('No signcrypted payloads, message truncated?');
     }
 
     return Object.assign(output, {
@@ -193,6 +199,7 @@ export async function designcrypt(signcrypted: Uint8Array, keypair: tweetnacl.Bo
 }
 
 export class DesigncryptStream extends Transform {
+    readonly sender: Uint8Array | null;
     private decoder = new msgpack.Decoder(undefined!, undefined);
     private header_data: [
         SigncryptedMessageHeader, Uint8Array, SigncryptedMessageRecipient, Uint8Array | null,
@@ -201,8 +208,10 @@ export class DesigncryptStream extends Transform {
     private payload_index = BigInt(-1);
     private i = 0;
 
-    constructor(readonly keypair: tweetnacl.BoxKeyPair) {
+    constructor(readonly keypair: tweetnacl.BoxKeyPair, sender?: Uint8Array | null) {
         super();
+
+        this.sender = sender;
     }
 
     get header() {
@@ -254,6 +263,10 @@ export class DesigncryptStream extends Transform {
             const [payload_key, recipient] = payload_key_and_recipient;
             const sender_public_key = header.decryptSender(payload_key);
 
+            if (this.sender && (!sender_public_key || !Buffer.from(sender_public_key).equals(this.sender))) {
+                throw new Error('Sender public key doesn\'t match');
+            }        
+
             this.header_data = [header, payload_key, recipient, sender_public_key];
         } else {
             this.payload_index++;
@@ -286,7 +299,7 @@ export class DesigncryptStream extends Transform {
             }
 
             if (!this.last_payload) {
-                throw new Error('No encrypted payloads, message truncated?');
+                throw new Error('No signcrypted payloads, message truncated?');
             }
         } catch (err) {
             return callback(err);

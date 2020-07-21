@@ -151,7 +151,9 @@ export interface DecryptResult extends Buffer {
     sender_public_key: Uint8Array | null;
 }
 
-export async function decrypt(encrypted: Uint8Array, keypair: tweetnacl.BoxKeyPair): Promise<DecryptResult> {
+export async function decrypt(
+    encrypted: Uint8Array, keypair: tweetnacl.BoxKeyPair, sender?: Uint8Array | null
+): Promise<DecryptResult> {
     const stream = new Readable();
     stream.push(encrypted);
     stream.push(null);
@@ -167,6 +169,10 @@ export async function decrypt(encrypted: Uint8Array, keypair: tweetnacl.BoxKeyPa
 
     const [payload_key, recipient] = header.decryptPayloadKey(keypair);
     const sender_public_key = header.decryptSender(payload_key);
+
+    if (sender && !Buffer.from(sender_public_key).equals(sender)) {
+        throw new Error('Sender public key doesn\'t match');
+    }
 
     recipient.generateMacKeyForRecipient(header.hash, header.public_key, sender_public_key, keypair.secretKey);
 
@@ -197,14 +203,17 @@ export async function decrypt(encrypted: Uint8Array, keypair: tweetnacl.BoxKeyPa
 }
 
 export class DecryptStream extends Transform {
+    readonly sender: Uint8Array | null;
     private decoder = new msgpack.Decoder(undefined!, undefined);
     private header_data: [EncryptedMessageHeader, Uint8Array, EncryptedMessageRecipient, Uint8Array] | null = null;
     private last_payload: EncryptedMessagePayload | null = null;
     private payload_index = BigInt(-1);
     private i = 0;
 
-    constructor(readonly keypair: tweetnacl.BoxKeyPair) {
+    constructor(readonly keypair: tweetnacl.BoxKeyPair, sender?: Uint8Array | null) {
         super();
+
+        this.sender = sender ?? null;
     }
 
     get header() {
@@ -252,6 +261,10 @@ export class DecryptStream extends Transform {
 
             const [payload_key, recipient] = header.decryptPayloadKey(this.keypair);
             const sender_public_key = header.decryptSender(payload_key);
+
+            if (this.sender && !Buffer.from(sender_public_key).equals(this.sender)) {
+                throw new Error('Sender public key doesn\'t match');
+            }
 
             recipient.generateMacKeyForRecipient(
                 header.hash, header.public_key, sender_public_key, this.keypair.secretKey

@@ -15,10 +15,10 @@ export async function encryptAndArmor(
     return armor(encrypted, {message_type: MessageType.ENCRYPTED_MESSAGE});
 }
 export async function dearmorAndDecrypt(
-    encrypted: string, keypair: tweetnacl.BoxKeyPair
+    encrypted: string, keypair: tweetnacl.BoxKeyPair, sender?: Uint8Array | null
 ): Promise<DearmorAndDecryptResult> {
     const dearmored = dearmor(encrypted);
-    return Object.assign(await decrypt(dearmored, keypair), {
+    return Object.assign(await decrypt(dearmored, keypair, sender), {
         remaining: dearmored.remaining,
         header_info: dearmored.header_info,
     });
@@ -42,9 +42,9 @@ export class DearmorAndDecryptStream extends Pumpify {
     readonly dearmor: DearmorStream;
     readonly decrypt: DecryptStream;
 
-    constructor(keypair: tweetnacl.BoxKeyPair, armor_options?: Partial<ArmorOptions>) {
+    constructor(keypair: tweetnacl.BoxKeyPair, sender?: Uint8Array | null, armor_options?: Partial<ArmorOptions>) {
         const dearmor = new DearmorStream(armor_options);
-        const decrypt = new DecryptStream(keypair);
+        const decrypt = new DecryptStream(keypair, sender);
 
         super(dearmor, decrypt);
 
