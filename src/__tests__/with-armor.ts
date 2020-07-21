@@ -70,6 +70,8 @@ describe('encryption', () => {
         const decrypted = await dearmorAndDecrypt(encrypted, KEYPAIR_BOB);
 
         expect(decrypted.toString()).toBe(INPUT_STRING);
+        expect(decrypted.header_info.message_type).toBe(MessageType.ENCRYPTED_MESSAGE);
+        expect(decrypted.header_info.app_name).toBe(null);
         expect(decrypted.sender_public_key).toStrictEqual(KEYPAIR_ALICE.publicKey);
     });
 
@@ -134,8 +136,8 @@ describe('signing', () => {
         const verified = await verifyArmored(signed, SIGNING_KEYPAIR.publicKey);
 
         expect(verified.toString()).toStrictEqual(INPUT_STRING);
-        // expect(verified.info.message_type).toBe('DETACHED SIGNATURE');
-        // expect(verified.info.app_name).toBe(null);
+        expect(verified.header_info.message_type).toBe(MessageType.SIGNED_MESSAGE);
+        expect(verified.header_info.app_name).toBe(null);
     });
 
     test('streaming dearmoring and verifying', async () => {
@@ -194,6 +196,8 @@ describe('signcryption', () => {
         const decrypted = await dearmorAndDesigncrypt(encrypted, KEYPAIR_BOB);
 
         expect(decrypted.toString()).toBe(INPUT_STRING);
+        expect(decrypted.header_info.message_type).toBe(MessageType.ENCRYPTED_MESSAGE);
+        expect(decrypted.header_info.app_name).toBe(null);
         expect(decrypted.sender_public_key).toStrictEqual(KEYPAIR_ALICE_S.publicKey);
     });
 
