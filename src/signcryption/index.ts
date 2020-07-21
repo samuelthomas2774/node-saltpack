@@ -211,7 +211,7 @@ export class DesigncryptStream extends Transform {
     constructor(readonly keypair: tweetnacl.BoxKeyPair, sender?: Uint8Array | null) {
         super();
 
-        this.sender = sender;
+        this.sender = sender ?? null;
     }
 
     get header() {
