@@ -95,7 +95,7 @@ export default class EncryptedMessageHeader extends Header {
 
         const [,,, public_key, sender, recipients] = data;
 
-        return new this(public_key, sender, recipients.map((recipient: [Uint8Array, Buffer], index: number) => {
+        return new this(public_key, sender, recipients.map((recipient: [Uint8Array, Uint8Array], index: number) => {
             return EncryptedMessageRecipient.from(recipient[0], recipient[1], index);
         }));
     }
