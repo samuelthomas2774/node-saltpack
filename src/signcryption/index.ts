@@ -19,7 +19,7 @@ export let debug_fix_key: Buffer | null = null;
 export let debug_fix_keypair: tweetnacl.BoxKeyPair | null = null;
 
 export async function signcrypt(
-    data: Uint8Array | string, keypair: tweetnacl.BoxKeyPair | null, recipients_keys: Uint8Array[]
+    data: Uint8Array | string, keypair: tweetnacl.SignKeyPair | null, recipients_keys: Uint8Array[]
 ): Promise<Buffer> {
     const chunks = chunkBuffer(data, CHUNK_LENGTH);
 
@@ -58,13 +58,13 @@ export async function signcrypt(
 export class SigncryptStream extends Transform {
     readonly payload_key: Buffer;
     readonly ephemeral_keypair: tweetnacl.BoxKeyPair;
-    readonly keypair: tweetnacl.BoxKeyPair | null;
+    readonly keypair: tweetnacl.SignKeyPair | null;
     readonly header: SigncryptedMessageHeader;
     private in_buffer = Buffer.alloc(0);
     private payload_index = BigInt(0);
     private i = 0;
 
-    constructor(keypair: tweetnacl.BoxKeyPair | null, recipients_keys: Uint8Array[]) {
+    constructor(keypair: tweetnacl.SignKeyPair | null, recipients_keys: Uint8Array[]) {
         super();
 
         // 1. Generate a random 32-byte payload key.

@@ -196,7 +196,7 @@ import * as tweetnacl from 'tweetnacl';
 // If you know the sender's public key you can pass it to DearmorAndVerifyStream and it will emit an error if it doesn't match
 const sender_key: Uint8Array = tweetnacl.sign.keyPair().publicKey;
 
-const stream = new DearmorAndVerifyStream(recipient_keypair, sender_key);
+const stream = new DearmorAndVerifyStream(sender_key);
 
 stream.on('end', () => {
     // If you didn't pass the sender's public key you should check it now
