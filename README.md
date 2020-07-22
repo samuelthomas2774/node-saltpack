@@ -214,7 +214,7 @@ stream.end('BEGIN SALTPACK SIGNED MESSAGE. kYM5h1pg6qz9UMn j6G9T0lmMjkYOsZ Kn4Ac
 stream.pipe(process.stdout);
 ```
 
-Detaching signing
+Detached signing
 ---
 
 `signDetachedAndArmor` signs a string or Uint8Array (or a Node.js Buffer) and returns the ASCII-armored signature

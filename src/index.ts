@@ -59,4 +59,10 @@ export {
     signDetachedAndArmor,
     verifyDetachedArmored,
     DearmorAndVerifyDetachedResult,
+
+    signcryptAndArmor,
+    dearmorAndDesigncrypt,
+    DearmorAndDesigncryptResult,
+    SigncryptAndArmorStream,
+    DearmorAndDesigncryptStream,
 } from './with-armor';
