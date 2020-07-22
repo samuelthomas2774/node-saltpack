@@ -1,6 +1,6 @@
 {
     "name": "@samuelthomas2774/saltpack",
-    "version": "0.2.1",
+    "version": "0.2.2",
     "description": "Node.js implementation of Saltpack.",
     "keywords": [
         "saltpack",
