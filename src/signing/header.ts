@@ -23,19 +23,29 @@ export default class SignedMessageHeader extends Header {
     readonly nonce: Uint8Array;
     /** `true` if this is an attached signature header, `false` if this is a detached signature header */
     readonly attached: boolean;
-    private _encoded_data: [Buffer, Buffer] | null = null;
 
     constructor(public_key: Uint8Array, nonce: Uint8Array, attached = true) {
         super();
+
+        if (!(public_key instanceof Uint8Array) || public_key.length !== 32) {
+            throw new TypeError('public_key must be a 32 byte Uint8Array');
+        }
+        if (!(nonce instanceof Uint8Array) || nonce.length !== 32) {
+            throw new TypeError('nonce must be a 32 byte Uint8Array');
+        }
+        if (typeof attached !== 'boolean') {
+            throw new TypeError('attached must be a boolean');
+        }
+
         this.public_key = public_key;
         this.nonce = nonce;
         this.attached = attached;
     }
 
     get encoded_data(): [Buffer, Buffer] {
-        return Object.defineProperty(this, '_encoded_data', {
+        return Object.defineProperty(this, 'encoded_data', {
             value: this.encode(),
-        })._encoded_data;
+        }).encoded_data;
     }
 
     /** The MessagePack encoded outer header data */
@@ -79,11 +89,9 @@ export default class SignedMessageHeader extends Header {
         if (data[2] !== MessageType.ATTACHED_SIGNING &&
             data[2] !== MessageType.DETACHED_SIGNING) throw new Error('Invalid data');
 
-        if (data.length < 5) throw new Error('Invalid data');
-
         const [,,, public_key, nonce] = data;
 
-        return new this(public_key, nonce, data[2] === MessageType.ATTACHED_SIGNING);
+        return new this(public_key as Uint8Array, nonce as Uint8Array, data[2] === MessageType.ATTACHED_SIGNING);
     }
 
     signDetached(data: Uint8Array, private_key: Uint8Array): Buffer {

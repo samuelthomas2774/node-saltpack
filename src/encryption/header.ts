@@ -9,18 +9,24 @@ export default class EncryptedMessageHeader extends Header {
     static readonly SENDER_KEY_SECRETBOX_NONCE = Buffer.from('saltpack_sender_key_sbox');
 
     /** The 32 byte X25519 ephemeral public key */
-    readonly public_key: Buffer;
+    readonly public_key: Uint8Array;
     /**
      * A NaCl secretbox containing the sender's actual X25519 public key (or the epemeral public key, if the
      * sender wishes to be anonymous)
      */
-    readonly sender_secretbox: Buffer;
+    readonly sender_secretbox: Uint8Array;
     /** An array of recipient objects */
     readonly recipients: EncryptedMessageRecipient[];
-    readonly _encoded_data: [Buffer, Buffer] | null = null;
 
-    constructor(public_key: Buffer, sender_secretbox: Buffer, recipients: EncryptedMessageRecipient[]) {
+    constructor(public_key: Uint8Array, sender_secretbox: Uint8Array, recipients: EncryptedMessageRecipient[]) {
         super();
+
+        if (!(public_key instanceof Uint8Array) || public_key.length !== 32) {
+            throw new TypeError('public_key must be a 32 byte Uint8Array');
+        }
+        if (!(sender_secretbox instanceof Uint8Array) || sender_secretbox.length !== 48) {
+            throw new TypeError('sender_secretbox must be a 48 byte Uint8Array');
+        }
 
         this.public_key = public_key;
         this.sender_secretbox = sender_secretbox;
@@ -28,9 +34,9 @@ export default class EncryptedMessageHeader extends Header {
     }
 
     get encoded_data(): [Buffer, Buffer] {
-        return Object.defineProperty(this, '_encoded_data', {
+        return Object.defineProperty(this, 'encoded_data', {
             value: this.encode(),
-        })._encoded_data;
+        }).encoded_data;
     }
 
     /** The MessagePack encoded outer header data */
@@ -46,20 +52,29 @@ export default class EncryptedMessageHeader extends Header {
         public_key: Uint8Array, payload_key: Uint8Array, sender_public_key: Uint8Array,
         recipients: EncryptedMessageRecipient[]
     ) {
+        if (!(sender_public_key instanceof Uint8Array) || sender_public_key.length !== 32) {
+            throw new TypeError('sender_public_key must be a 32 byte Uint8Array');
+        }
+        if (!(payload_key instanceof Uint8Array) || payload_key.length !== 32) {
+            throw new TypeError('payload_key must be a 32 byte Uint8Array');
+        }
+
         // 3. Encrypt the sender's long-term public key using crypto_secretbox with the payload key and the nonce saltpack_sender_key_sbox, to create the sender secretbox.
         // const sender_secretbox = sodium_crypto_secretbox($sender_public_key, self::SENDER_KEY_SECRETBOX_NONCE, $payload_key);
         const sender_secretbox = tweetnacl.secretbox(
             sender_public_key, EncryptedMessageHeader.SENDER_KEY_SECRETBOX_NONCE, payload_key
         );
 
-        return new this(Buffer.from(public_key), Buffer.from(sender_secretbox), recipients);
+        return new this(public_key, sender_secretbox, recipients);
     }
 
     encode() {
         return EncryptedMessageHeader.encodeHeader(this.public_key, this.sender_secretbox, this.recipients);
     }
 
-    static encodeHeader(public_key: Buffer, sender: Buffer, recipients: EncryptedMessageRecipient[]): [Buffer, Buffer] {
+    static encodeHeader(
+        public_key: Uint8Array, sender: Uint8Array, recipients: EncryptedMessageRecipient[]
+    ): [Buffer, Buffer] {
         const data = [
             'saltpack',
             [2, 0],
@@ -90,12 +105,15 @@ export default class EncryptedMessageHeader extends Header {
         const [header_hash, data] = super.decode1(encoded, unwrapped);
 
         if (data[2] !== MessageType.ENCRYPTION) throw new Error('Invalid data');
+        const [,,, public_key, sender_secretbox, recipients] = data;
 
-        if (data.length < 6) throw new Error('Invalid data');
+        if (!(recipients instanceof Array)) throw new Error('Invalid data');
 
-        const [,,, public_key, sender, recipients] = data;
+        return new this(public_key as any, sender_secretbox as any, recipients.map((recipient: unknown, index) => {
+            if (!(recipient instanceof Array) || recipient.length < 2) {
+                throw new TypeError('Invalid data');
+            }
 
-        return new this(public_key, sender, recipients.map((recipient: [Uint8Array, Uint8Array], index: number) => {
             return EncryptedMessageRecipient.from(recipient[0], recipient[1], index);
         }));
     }

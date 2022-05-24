@@ -16,21 +16,20 @@ export default class SignedMessagePayload {
     /** `true` if this is the final payload */
     readonly final: boolean;
     /** The NaCl detached signature for this payload */
-    readonly signature: Buffer;
+    readonly signature: Uint8Array;
     /** This payload's data */
-    readonly data: Buffer;
-    private _encoded_data: Buffer | null = null;
+    readonly data: Uint8Array;
 
-    constructor(final: boolean, signature: Buffer, data: Buffer) {
+    constructor(final: boolean, signature: Uint8Array, data: Uint8Array) {
         this.final = final;
         this.signature = signature;
         this.data = data;
     }
 
     get encoded_data(): Buffer {
-        return Object.defineProperty(this, '_encoded_data', {
+        return Object.defineProperty(this, 'encoded_data', {
             value: this.encode(),
-        })._encoded_data;
+        }).encoded_data;
     }
 
     /** The MessagePack encoded payload data */
@@ -41,16 +40,15 @@ export default class SignedMessagePayload {
     static create(
         header: SignedMessageHeader, private_key: Uint8Array, data: Buffer, index: number | bigint, final = false
     ): SignedMessagePayload {
-        if (!(private_key instanceof Buffer)) private_key = Buffer.from(private_key);
         if (typeof index === 'number') index = BigInt(index);
 
         const sign_data = this.generateSignData(header.hash, index, final, data);
         const signature = tweetnacl.sign.detached(sign_data, private_key);
 
-        return new this(final, Buffer.from(signature), data);
+        return new this(final, signature, data);
     }
 
-    static generateSignData(header_hash: Buffer, index: bigint, final: boolean, data: Buffer): Buffer {
+    static generateSignData(header_hash: Uint8Array, index: bigint, final: boolean, data: Uint8Array): Buffer {
         // To make each signature, the sender first takes the SHA512 hash of the concatenation of four values:
 
         // the header hash from above
@@ -76,7 +74,7 @@ export default class SignedMessagePayload {
         return SignedMessagePayload.encodePayload(this.final, this.signature, this.data);
     }
 
-    static encodePayload(final: boolean, signature: Buffer, payload_chunk: Buffer): Buffer {
+    static encodePayload(final: boolean, signature: Uint8Array, payload_chunk: Uint8Array): Buffer {
         return Buffer.from(msgpack.encode([
             final,
             signature,

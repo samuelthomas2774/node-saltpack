@@ -20,6 +20,16 @@ export default class SigncryptedMessageRecipient {
         recipient_identifier: Uint8Array, /*shared_symmetric_key: Uint8Array | null,*/
         encrypted_payload_key: Uint8Array, index: bigint
     ) {
+        if (!(recipient_identifier instanceof Uint8Array) || recipient_identifier.length !== 32) {
+            throw new TypeError('recipient_identifier must be a 32 byte Uint8Array');
+        }
+        if (!(encrypted_payload_key instanceof Uint8Array) || encrypted_payload_key.length !== 48) {
+            throw new TypeError('payload_key_box must be a 48 byte Uint8Array');
+        }
+        if (typeof index !== 'bigint') {
+            throw new TypeError('index must be a bigint');
+        }
+
         this.recipient_identifier = recipient_identifier;
         // this.shared_symmetric_key = shared_symmetric_key;
         this.encrypted_payload_key = encrypted_payload_key;

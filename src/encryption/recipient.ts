@@ -19,6 +19,19 @@ export default class EncryptedMessageRecipient {
     readonly mac_key: Buffer | null = null;
 
     constructor(public_key: Uint8Array | null, encrypted_payload_key: Uint8Array, index: bigint, anonymous = false) {
+        if (public_key !== null && (!(public_key instanceof Uint8Array) || public_key.length !== 32)) {
+            throw new TypeError('recipient_public_key must be a 32 byte Uint8Array');
+        }
+        if (!(encrypted_payload_key instanceof Uint8Array) || encrypted_payload_key.length !== 48) {
+            throw new TypeError('payload_key_box must be a 48 byte Uint8Array');
+        }
+        if (typeof index !== 'bigint') {
+            throw new TypeError('index must be a bigint');
+        }
+        if (typeof anonymous !== 'boolean') {
+            throw new TypeError('anonymous must be a boolean');
+        }
+
         this.public_key = public_key;
         this.encrypted_payload_key = encrypted_payload_key;
         this.index = index;

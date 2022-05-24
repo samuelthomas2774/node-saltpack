@@ -20,7 +20,6 @@ export default class EncryptedMessagePayload {
     readonly authenticators: Uint8Array[];
     /** The NaCl secretbox for this payload */
     readonly payload_secretbox: Uint8Array;
-    private _encoded_data: Buffer | null = null;
 
     constructor(final: boolean, authenticators: Uint8Array[], payload_secretbox: Uint8Array) {
         this.final = final;
@@ -29,9 +28,9 @@ export default class EncryptedMessagePayload {
     }
 
     get encoded_data(): Buffer {
-        return Object.defineProperty(this, '_encoded_data', {
+        return Object.defineProperty(this, 'encoded_data', {
             value: this.encode(),
-        })._encoded_data;
+        }).encoded_data;
     }
 
     /** The MessagePack encoded payload data */
@@ -46,7 +45,7 @@ export default class EncryptedMessagePayload {
         index_buffer.writeBigUInt64BE(index);
         const nonce = Buffer.concat([this.PAYLOAD_NONCE_PREFIX, index_buffer]);
 
-        const payload_secretbox = Buffer.from(tweetnacl.secretbox(data, nonce, payload_key));
+        const payload_secretbox = tweetnacl.secretbox(data, nonce, payload_key);
 
         const authenticator_hash = this.generateAuthenticatorHash(header.hash, payload_secretbox, nonce, final);
 

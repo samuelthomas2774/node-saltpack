@@ -17,10 +17,16 @@ export default class SigncryptedMessageHeader extends Header {
     readonly sender_secretbox: Uint8Array;
     /** An array of recipient objects */
     readonly recipients: SigncryptedMessageRecipient[];
-    readonly _encoded_data: [Buffer, Buffer] | null = null;
 
     constructor(public_key: Uint8Array, sender_secretbox: Uint8Array, recipients: SigncryptedMessageRecipient[]) {
         super();
+
+        if (!(public_key instanceof Uint8Array) || public_key.length !== 32) {
+            throw new TypeError('public_key must be a 32 byte Uint8Array');
+        }
+        if (!(sender_secretbox instanceof Uint8Array) || sender_secretbox.length !== 48) {
+            throw new TypeError('sender_secretbox must be a 48 byte Uint8Array');
+        }
 
         this.public_key = public_key;
         this.sender_secretbox = sender_secretbox;
@@ -28,9 +34,9 @@ export default class SigncryptedMessageHeader extends Header {
     }
 
     get encoded_data(): [Buffer, Buffer] {
-        return Object.defineProperty(this, '_encoded_data', {
+        return Object.defineProperty(this, 'encoded_data', {
             value: this.encode(),
-        })._encoded_data;
+        }).encoded_data;
     }
 
     /** The MessagePack encoded outer header data */
@@ -46,6 +52,15 @@ export default class SigncryptedMessageHeader extends Header {
         public_key: Uint8Array, payload_key: Uint8Array, sender_public_key: Uint8Array | null,
         recipients: SigncryptedMessageRecipient[]
     ) {
+        if (sender_public_key !== null &&
+            (!(sender_public_key instanceof Uint8Array) || sender_public_key.length !== 32)
+        ) {
+            throw new TypeError('sender_public_key must be a 32 byte Uint8Array');
+        }
+        if (!(payload_key instanceof Uint8Array) || payload_key.length !== 32) {
+            throw new TypeError('payload_key must be a 32 byte Uint8Array');
+        }
+
         // If Alice wants to be anonymous to recipients as well, she can supply an all-zero signing public key in
         // step #3.
         if (!sender_public_key) sender_public_key = Buffer.alloc(32);
@@ -63,7 +78,9 @@ export default class SigncryptedMessageHeader extends Header {
         return SigncryptedMessageHeader.encodeHeader(this.public_key, this.sender_secretbox, this.recipients);
     }
 
-    static encodeHeader(public_key: Uint8Array, sender: Uint8Array, recipients: SigncryptedMessageRecipient[]): [Buffer, Buffer] {
+    static encodeHeader(
+        public_key: Uint8Array, sender: Uint8Array, recipients: SigncryptedMessageRecipient[]
+    ): [Buffer, Buffer] {
         const data = [
             'saltpack',
             [2, 0],
@@ -94,12 +111,15 @@ export default class SigncryptedMessageHeader extends Header {
         const [header_hash, data] = super.decode1(encoded, unwrapped);
 
         if (data[2] !== MessageType.SIGNCRYPTION) throw new Error('Invalid data');
+        const [,,, public_key, sender_secretbox, recipients] = data;
 
-        if (data.length < 6) throw new Error('Invalid data');
+        if (!(recipients instanceof Array)) throw new Error('Invalid data');
 
-        const [,,, public_key, sender, recipients] = data;
+        return new this(public_key as any, sender_secretbox as any, recipients.map((recipient: unknown, index) => {
+            if (!(recipient instanceof Array) || recipient.length < 2) {
+                throw new TypeError('Invalid data');
+            }
 
-        return new this(public_key, sender, recipients.map((recipient: [Uint8Array, Uint8Array], index: number) => {
             return SigncryptedMessageRecipient.from(recipient[0], recipient[1], index);
         }));
     }

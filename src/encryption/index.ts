@@ -35,7 +35,9 @@ export async function encrypt(
         return EncryptedMessageRecipient.create(key, ephemeral_keypair.secretKey, payload_key, index);
     });
 
-    const header = EncryptedMessageHeader.create(ephemeral_keypair.publicKey, payload_key, keypair.publicKey, recipients);
+    const header = EncryptedMessageHeader.create(
+        ephemeral_keypair.publicKey, payload_key, keypair.publicKey, recipients
+    );
 
     for (const recipient of recipients) {
         recipient.generateMacKeyForSender(header.hash, ephemeral_keypair.secretKey, keypair.secretKey);
@@ -246,7 +248,7 @@ export class DecryptStream extends Transform {
             }
         } catch (err) {
             if (!(err instanceof DataViewIndexOutOfBoundsError)) {
-                return callback(err);
+                return callback(err as Error);
             }
         }
 
@@ -303,7 +305,7 @@ export class DecryptStream extends Transform {
                 throw new Error('No encrypted payloads, message truncated?');
             }
         } catch (err) {
-            return callback(err);
+            return callback(err as Error);
         }
 
         callback();
