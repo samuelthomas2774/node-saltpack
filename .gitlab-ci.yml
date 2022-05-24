@@ -1,4 +1,4 @@
-image: node:12
+image: node:17
 
 cache:
     paths:
@@ -18,26 +18,15 @@ build:
             - dist
             - saltpack.tgz
 
-test-10:
-    image: node:10
+test:
+    image: node:$NODE_VERSION
     script:
         - npm run test
     dependencies:
         - build
-
-test-12:
-    image: node:12
-    script:
-        - npm run test
-    dependencies:
-        - build
-
-test-14:
-    image: node:14
-    script:
-        - npm run test
-    dependencies:
-        - build
+    parallel:
+        matrix:
+            - NODE_VERSION: [14, 16, 17, 18]
 
 publish-npm:
     stage: deploy
