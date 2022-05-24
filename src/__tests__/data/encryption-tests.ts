@@ -1,4 +1,4 @@
-export {INPUT_STRING} from './common';
+export { INPUT_STRING } from './common.js';
 
 // Encrypted with a hardcoded keypair (in encryption-keys.ts)
 export const ENCRYPTED_HEX =

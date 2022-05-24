@@ -1,6 +1,7 @@
 
 import * as crypto from 'crypto';
-import * as tweetnacl from 'tweetnacl';
+import tweetnacl from 'tweetnacl';
+import { isBufferOrUint8Array } from '../util';
 
 export default class SigncryptedMessageRecipient {
     static readonly SHARED_KEY_NONCE = Buffer.from('saltpack_derived_sboxkey');
@@ -20,10 +21,10 @@ export default class SigncryptedMessageRecipient {
         recipient_identifier: Uint8Array, /*shared_symmetric_key: Uint8Array | null,*/
         encrypted_payload_key: Uint8Array, index: bigint
     ) {
-        if (!(recipient_identifier instanceof Uint8Array) || recipient_identifier.length !== 32) {
+        if (!isBufferOrUint8Array(recipient_identifier) || recipient_identifier.length !== 32) {
             throw new TypeError('recipient_identifier must be a 32 byte Uint8Array');
         }
-        if (!(encrypted_payload_key instanceof Uint8Array) || encrypted_payload_key.length !== 48) {
+        if (!isBufferOrUint8Array(encrypted_payload_key) || encrypted_payload_key.length !== 48) {
             throw new TypeError('payload_key_box must be a 48 byte Uint8Array');
         }
         if (typeof index !== 'bigint') {
@@ -49,7 +50,11 @@ export default class SigncryptedMessageRecipient {
 
         // Secretbox the payload key using this derived symmetric key, with the nonce saltpack_recipsbXXXXXXXX,
         // where XXXXXXXX is the 8-byte big-endian unsigned recipient index.
-        const encrypted_payload_key = tweetnacl.secretbox(payload_key, recipient_index, shared_symmetric_key);
+        const encrypted_payload_key = tweetnacl.secretbox(
+            Uint8Array.from(payload_key),
+            Uint8Array.from(recipient_index),
+            Uint8Array.from(shared_symmetric_key),
+        );
 
         return new this(recipient_identifier, /*shared_symmetric_key,*/ encrypted_payload_key, index);
     }
@@ -73,7 +78,9 @@ export default class SigncryptedMessageRecipient {
      */
     decryptPayloadKey(shared_symmetric_key: Uint8Array): Uint8Array | null {
         return tweetnacl.secretbox.open(
-            this.encrypted_payload_key, this.recipient_index, shared_symmetric_key
+            Uint8Array.from(this.encrypted_payload_key),
+            Uint8Array.from(this.recipient_index),
+            Uint8Array.from(shared_symmetric_key),
         );
     }
 
@@ -84,7 +91,10 @@ export default class SigncryptedMessageRecipient {
         // the recipient public key, the ephemeral private key, and the nonce saltpack_derived_sboxkey, and taking
         // the last 32 bytes of the resulting box.
         const shared_symmetric_key = Buffer.from(tweetnacl.box(
-            Buffer.alloc(32).fill('\0'), this.SHARED_KEY_NONCE, public_key, ephemeral_private_key
+            Uint8Array.from(Buffer.alloc(32).fill('\0')),
+            Uint8Array.from(this.SHARED_KEY_NONCE),
+            Uint8Array.from(public_key),
+            Uint8Array.from(ephemeral_private_key),
         )).slice(-32);
 
         // To compute the recipient identifier, concatenate the derived symmetric key and the
@@ -105,7 +115,10 @@ export default class SigncryptedMessageRecipient {
         // the recipient public key, the ephemeral private key, and the nonce saltpack_derived_sboxkey, and taking
         // the last 32 bytes of the resulting box.
         const shared_symmetric_key = Buffer.from(tweetnacl.box(
-            Buffer.alloc(32).fill('\0'), this.SHARED_KEY_NONCE, ephemeral_public_key, private_key
+            Uint8Array.from(Buffer.alloc(32).fill('\0')),
+            Uint8Array.from(this.SHARED_KEY_NONCE),
+            Uint8Array.from(ephemeral_public_key),
+            Uint8Array.from(private_key),
         )).slice(-32);
 
         // To compute the recipient identifier, concatenate the derived symmetric key and the

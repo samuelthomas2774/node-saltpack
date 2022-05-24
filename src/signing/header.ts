@@ -1,8 +1,9 @@
 
-import Header, {MessageType} from '../message-header';
+import Header, { MessageType } from '../message-header.js';
 import * as crypto from 'crypto';
-import * as tweetnacl from 'tweetnacl';
+import tweetnacl from 'tweetnacl';
 import * as msgpack from '@msgpack/msgpack';
+import { isBufferOrUint8Array } from '../util.js';
 
 // [
 //     format name,
@@ -27,10 +28,10 @@ export default class SignedMessageHeader extends Header {
     constructor(public_key: Uint8Array, nonce: Uint8Array, attached = true) {
         super();
 
-        if (!(public_key instanceof Uint8Array) || public_key.length !== 32) {
+        if (!isBufferOrUint8Array(public_key) || public_key.length !== 32) {
             throw new TypeError('public_key must be a 32 byte Uint8Array');
         }
-        if (!(nonce instanceof Uint8Array) || nonce.length !== 32) {
+        if (!isBufferOrUint8Array(nonce) || nonce.length !== 32) {
             throw new TypeError('nonce must be a 32 byte Uint8Array');
         }
         if (typeof attached !== 'boolean') {
@@ -106,7 +107,10 @@ export default class SignedMessageHeader extends Header {
 
         const sign_data = Buffer.concat([SignedMessageHeader.DETACHED_SIGNATURE_PREFIX, hash]);
 
-        return Buffer.from(tweetnacl.sign.detached(sign_data, private_key));
+        return Buffer.from(tweetnacl.sign.detached(
+            Uint8Array.from(sign_data),
+            Uint8Array.from(private_key),
+        ));
     }
 
     verifyDetached(signature: Uint8Array, data: Uint8Array, public_key: Uint8Array) {
@@ -121,7 +125,11 @@ export default class SignedMessageHeader extends Header {
 
         const sign_data = Buffer.concat([SignedMessageHeader.DETACHED_SIGNATURE_PREFIX, hash]);
 
-        if (!tweetnacl.sign.detached.verify(sign_data, signature, public_key)) {
+        if (!tweetnacl.sign.detached.verify(
+            Uint8Array.from(sign_data),
+            Uint8Array.from(signature),
+            Uint8Array.from(public_key),
+        )) {
             throw new Error('Invalid signature');
         }
     }

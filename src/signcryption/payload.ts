@@ -1,8 +1,7 @@
 
-import SigncryptedMessageHeader from './header';
-import SigncryptedMessageRecipient from './recipient';
+import SigncryptedMessageHeader from './header.js';
 import * as crypto from 'crypto';
-import * as tweetnacl from 'tweetnacl';
+import tweetnacl from 'tweetnacl';
 import * as msgpack from '@msgpack/msgpack';
 
 // [
@@ -17,7 +16,6 @@ export default class SigncryptedMessagePayload {
     readonly payload_secretbox: Uint8Array;
     /** `true` if this is the final payload */
     readonly final: boolean;
-    private _encoded_data: Buffer | null = null;
 
     constructor(payload_secretbox: Uint8Array, final: boolean) {
         this.payload_secretbox = payload_secretbox;
@@ -25,9 +23,9 @@ export default class SigncryptedMessagePayload {
     }
 
     get encoded_data(): Buffer {
-        return Object.defineProperty(this, '_encoded_data', {
+        return Object.defineProperty(this, 'encoded_data', {
             value: this.encode(),
-        })._encoded_data;
+        }).encoded_data;
     }
 
     /** The MessagePack encoded payload data */
@@ -44,14 +42,19 @@ export default class SigncryptedMessagePayload {
         // 3. Sign the signature input with the sender's long-term private signing key, producing a 64-byte
         // Ed25519 signature. If the sender is anonymous, the signature is 64 zero bytes instead.
         const signature = private_key ?
-            tweetnacl.sign.detached(this.generateSignatureData(header.hash, nonce, final, data), private_key) :
+            tweetnacl.sign.detached(
+                Uint8Array.from(this.generateSignatureData(header.hash, nonce, final, data)),
+                Uint8Array.from(private_key),
+            ) :
             Buffer.alloc(64);
 
         // 4. Prepend that signature onto the front of the plaintext chunk.
         // 5. Encrypt the attached signature from #4 using the payload key and the packet nonce.
 
         const payload_secretbox = Buffer.from(tweetnacl.secretbox(
-            Buffer.concat([signature, data]), nonce, payload_key
+            Uint8Array.from(Buffer.concat([signature, data])),
+            Uint8Array.from(nonce),
+            Uint8Array.from(payload_key),
         ));
 
         return new this(payload_secretbox, final);
@@ -121,7 +124,11 @@ export default class SigncryptedMessagePayload {
         const nonce = SigncryptedMessagePayload.generateNonce(header.hash, index, this.final);
 
         // 2. Decrypt the chunk using the payload key and the packet nonce.
-        const signature_data = tweetnacl.secretbox.open(this.payload_secretbox, nonce, payload_key);
+        const signature_data = tweetnacl.secretbox.open(
+            Uint8Array.from(this.payload_secretbox),
+            Uint8Array.from(nonce),
+            Uint8Array.from(payload_key),
+        );
 
         if (!signature_data) {
             throw new Error('Failed to decrypt data');
@@ -138,7 +145,11 @@ export default class SigncryptedMessagePayload {
 
             // 5. Verify the detached signature from step #3 against the signature input. If the sender's public key
             // is all zero bytes, however, then the sender is anonymous, and verification is skipped.
-            if (!tweetnacl.sign.detached.verify(sign_data, signature, public_key)) {
+            if (!tweetnacl.sign.detached.verify(
+                Uint8Array.from(sign_data),
+                Uint8Array.from(signature),
+                Uint8Array.from(public_key),
+            )) {
                 throw new Error('Invalid signature');
             }
         }

@@ -1,6 +1,7 @@
 
 import * as crypto from 'crypto';
-import * as tweetnacl from 'tweetnacl';
+import tweetnacl from 'tweetnacl';
+import { isBufferOrUint8Array } from '../util';
 
 export default class EncryptedMessageRecipient {
     static readonly PAYLOAD_KEY_BOX_NONCE_PREFIX_V2 = Buffer.from('saltpack_recipsb');
@@ -19,10 +20,10 @@ export default class EncryptedMessageRecipient {
     readonly mac_key: Buffer | null = null;
 
     constructor(public_key: Uint8Array | null, encrypted_payload_key: Uint8Array, index: bigint, anonymous = false) {
-        if (public_key !== null && (!(public_key instanceof Uint8Array) || public_key.length !== 32)) {
+        if (public_key !== null && (!isBufferOrUint8Array(public_key) || public_key.length !== 32)) {
             throw new TypeError('recipient_public_key must be a 32 byte Uint8Array');
         }
-        if (!(encrypted_payload_key instanceof Uint8Array) || encrypted_payload_key.length !== 48) {
+        if (!isBufferOrUint8Array(encrypted_payload_key) || encrypted_payload_key.length !== 48) {
             throw new TypeError('payload_key_box must be a 48 byte Uint8Array');
         }
         if (typeof index !== 'bigint') {
@@ -54,7 +55,12 @@ export default class EncryptedMessageRecipient {
         const recipient_index = this.generateRecipientIndex(index);
 
         // 4. For each recipient, encrypt the payload key using crypto_box with the recipient's public key, the ephemeral private key, and the nonce saltpack_recipsbXXXXXXXX. XXXXXXXX is 8-byte big-endian unsigned recipient index, where the first recipient is index zero. Pair these with the recipients' public keys, or null for anonymous recipients, and collect the pairs into the recipients list.
-        const encrypted_payload_key = tweetnacl.box(payload_key, recipient_index, public_key, ephemeral_private_key);
+        const encrypted_payload_key = tweetnacl.box(
+            Uint8Array.from(payload_key),
+            Uint8Array.from(recipient_index),
+            Uint8Array.from(public_key),
+            Uint8Array.from(ephemeral_private_key),
+        );
 
         return new this(public_key, encrypted_payload_key, index, anonymous);
     }
@@ -80,9 +86,14 @@ export default class EncryptedMessageRecipient {
         ephemeral_public_key: Uint8Array, recipient_private_key: Uint8Array, secret: Uint8Array | null = null
     ): Uint8Array | null {
         const payload_key = secret ? tweetnacl.box.open.after(
-            this.encrypted_payload_key, this.recipient_index, secret
+            Uint8Array.from(this.encrypted_payload_key),
+            Uint8Array.from(this.recipient_index),
+            Uint8Array.from(secret),
         ) : tweetnacl.box.open(
-            this.encrypted_payload_key, this.recipient_index, ephemeral_public_key, recipient_private_key
+            Uint8Array.from(this.encrypted_payload_key),
+            Uint8Array.from(this.recipient_index),
+            Uint8Array.from(ephemeral_public_key),
+            Uint8Array.from(recipient_private_key),
         );
 
         if (!payload_key) return null;
@@ -108,7 +119,12 @@ export default class EncryptedMessageRecipient {
 
         // 11. Encrypt 32 zero bytes using crypto_box with the recipient's public key, the sender's long-term
         // private key, and the nonce from the previous step.
-        const box_1 = tweetnacl.box(Buffer.alloc(32).fill('\0'), nonce, public_key, sender_private_key);
+        const box_1 = tweetnacl.box(
+            Uint8Array.from(Buffer.alloc(32).fill('\0')),
+            Uint8Array.from(nonce),
+            Uint8Array.from(public_key),
+            Uint8Array.from(sender_private_key),
+        );
 
         // 12. Modify the nonce from step 10 by setting the least significant bit of byte
         // 12.1. That is: nonce[15] |= 0x01.
@@ -116,7 +132,12 @@ export default class EncryptedMessageRecipient {
 
         // 13. Encrypt 32 zero bytes again, as in step 11, but using the ephemeral private key rather than the
         // sender's long term private key.
-        const box_2 = tweetnacl.box(Buffer.alloc(32).fill('\0'), nonce, public_key, ephemeral_private_key);
+        const box_2 = tweetnacl.box(
+            Uint8Array.from(Buffer.alloc(32).fill('\0')),
+            Uint8Array.from(nonce),
+            Uint8Array.from(public_key),
+            Uint8Array.from(ephemeral_private_key),
+        );
 
         // 14. Concatenate the last 32 bytes each box from steps 11 and 13. Take the SHA512 hash of that
         // concatenation. The recipient's MAC Key is the first 32 bytes of that hash.
@@ -146,7 +167,12 @@ export default class EncryptedMessageRecipient {
 
         // 11. Encrypt 32 zero bytes using crypto_box with the recipient's public key, the sender's long-term
         // private key, and the nonce from the previous step.
-        const box_1 = tweetnacl.box(Buffer.alloc(32).fill('\0'), nonce, sender_public_key, private_key);
+        const box_1 = tweetnacl.box(
+            Uint8Array.from(Buffer.alloc(32).fill('\0')),
+            Uint8Array.from(nonce),
+            Uint8Array.from(sender_public_key),
+            Uint8Array.from(private_key),
+        );
 
         // 12. Modify the nonce from step 10 by setting the least significant bit of byte
         // 12.1. That is: nonce[15] |= 0x01.
@@ -154,7 +180,12 @@ export default class EncryptedMessageRecipient {
 
         // 13. Encrypt 32 zero bytes again, as in step 11, but using the ephemeral private key rather than the
         // sender's long term private key.
-        const box_2 = tweetnacl.box(Buffer.alloc(32).fill('\0'), nonce, ephemeral_public_key, private_key);
+        const box_2 = tweetnacl.box(
+            Uint8Array.from(Buffer.alloc(32).fill('\0')),
+            Uint8Array.from(nonce),
+            Uint8Array.from(ephemeral_public_key),
+            Uint8Array.from(private_key),
+        );
 
         // 14. Concatenate the last 32 bytes each box from steps 11 and 13. Take the SHA512 hash of that
         // concatenation. The recipient's MAC Key is the first 32 bytes of that hash.

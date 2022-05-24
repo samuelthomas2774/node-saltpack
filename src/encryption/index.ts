@@ -1,22 +1,29 @@
 
-import EncryptedMessageHeader from './header';
-import EncryptedMessageRecipient from './recipient';
-import EncryptedMessagePayload from './payload';
-import {chunkBuffer} from '../util';
-import {Readable, Transform, TransformCallback} from 'stream';
+import EncryptedMessageHeader from './header.js';
+import EncryptedMessageRecipient from './recipient.js';
+import EncryptedMessagePayload from './payload.js';
+import { chunkBuffer } from '../util.js';
+import { Readable, Transform, TransformCallback } from 'stream';
 import * as crypto from 'crypto';
 import * as util from 'util';
-import * as tweetnacl from 'tweetnacl';
+import tweetnacl from 'tweetnacl';
 import * as msgpack from '@msgpack/msgpack';
-import {DataViewIndexOutOfBoundsError} from '@msgpack/msgpack/dist/Decoder';
+import { DataViewIndexOutOfBoundsError } from '@msgpack/msgpack/dist/Decoder';
 
 const randomBytes = util.promisify(crypto.randomBytes);
 
 const CHUNK_LENGTH = 1024 * 1024;
 
-export let debug = false;
-export let debug_fix_key: Buffer | null = null;
-export let debug_fix_keypair: tweetnacl.BoxKeyPair | null = null;
+let debug = false;
+let debug_fix_key: Buffer | null = null;
+let debug_fix_keypair: tweetnacl.BoxKeyPair | null = null;
+
+export function debugSetKey(key: Buffer) {
+    debug_fix_key = key;
+}
+export function debugSetKeypair(keypair: tweetnacl.BoxKeyPair) {
+    debug_fix_keypair = keypair;
+}
 
 export async function encrypt(
     data: Uint8Array | string, keypair: tweetnacl.BoxKeyPair | null, recipients_keys: Uint8Array[]

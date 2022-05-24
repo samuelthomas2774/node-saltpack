@@ -1,4 +1,8 @@
 
+export function isBufferOrUint8Array(buffer: Buffer | Uint8Array) {
+    return buffer instanceof Buffer || buffer instanceof Uint8Array;
+}
+
 export function chunkBuffer(buffer: Uint8Array | string, length: number): Buffer[]
 export function chunkBuffer(_buffer: Uint8Array | string, length: number): Buffer[] {
     let buffer = _buffer instanceof Buffer ? _buffer : Buffer.from(_buffer);

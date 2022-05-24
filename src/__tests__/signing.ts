@@ -1,12 +1,9 @@
 
-// @ts-ignore
-global.Uint8Array = Buffer.__proto__;
+import { sign, verify, SignStream, VerifyStream, signDetached, verifyDetached } from '../signing/index.js';
+import SignedMessageHeader from '../signing/header.js';
 
-import {sign, verify, SignStream, VerifyStream, signDetached, verifyDetached} from '../signing';
-import SignedMessageHeader from '../signing/header';
-
-import {KEYPAIR} from './data/signing-keys';
-import {INPUT_STRING, SIGNED, DETACHED_SIGNATURE} from './data/signing-tests';
+import { KEYPAIR } from './data/signing-keys.js';
+import { INPUT_STRING, SIGNED, DETACHED_SIGNATURE } from './data/signing-tests.js';
 
 SignedMessageHeader.debug_fix_nonce = Buffer.alloc(32).fill('\x00');
 

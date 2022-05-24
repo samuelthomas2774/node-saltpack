@@ -2,8 +2,11 @@
     "compilerOptions": {
         "strict": true,
         "declaration": true,
+        "skipLibCheck": true,
         "target": "es6",
-        "module": "commonjs",
+        "module": "es2020",
+        "moduleResolution": "node",
+        "allowSyntheticDefaultImports": true,
         "rootDir": "src",
         "outDir": "dist",
         "sourceMap": true

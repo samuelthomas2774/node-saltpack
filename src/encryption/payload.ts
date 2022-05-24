@@ -1,8 +1,8 @@
 
-import EncryptedMessageHeader from './header';
-import EncryptedMessageRecipient from './recipient';
+import EncryptedMessageHeader from './header.js';
+import EncryptedMessageRecipient from './recipient.js';
 import * as crypto from 'crypto';
-import * as tweetnacl from 'tweetnacl';
+import tweetnacl from 'tweetnacl';
 import * as msgpack from '@msgpack/msgpack';
 
 // [
@@ -45,7 +45,11 @@ export default class EncryptedMessagePayload {
         index_buffer.writeBigUInt64BE(index);
         const nonce = Buffer.concat([this.PAYLOAD_NONCE_PREFIX, index_buffer]);
 
-        const payload_secretbox = tweetnacl.secretbox(data, nonce, payload_key);
+        const payload_secretbox = tweetnacl.secretbox(
+            Uint8Array.from(data),
+            Uint8Array.from(nonce),
+            Uint8Array.from(payload_key),
+        );
 
         const authenticator_hash = this.generateAuthenticatorHash(header.hash, payload_secretbox, nonce, final);
 
@@ -127,7 +131,11 @@ export default class EncryptedMessagePayload {
             throw new Error('Invalid authenticator');
         }
 
-        const decrypted = tweetnacl.secretbox.open(this.payload_secretbox, nonce, payload_key);
+        const decrypted = tweetnacl.secretbox.open(
+            Uint8Array.from(this.payload_secretbox),
+            Uint8Array.from(nonce),
+            Uint8Array.from(payload_key),
+        );
 
         if (!decrypted) {
             throw new Error('Failed to decrypt data');

@@ -1,20 +1,14 @@
 
-// @ts-ignore
-global.Uint8Array = Buffer.__proto__;
-
-import * as Signcryption from '../signcryption';
-import {signcrypt, designcrypt, SigncryptStream, DesigncryptStream} from '../signcryption';
+import { signcrypt, designcrypt, SigncryptStream, DesigncryptStream, debugSetKey, debugSetKeypair } from '../signcryption/index.js';
 
 // With signcryption the sender *signs the message* with their Ed25519 key, and *encrypts for recipients'*
 // Curve25519 keys - so Alice, the sender, uses a signing key and Bob, the recipient, uses an encryption key
-import {KEYPAIR, /*KEYPAIR_ALICE,*/ KEYPAIR_BOB, KEYPAIR_MALLORY} from './data/encryption-keys';
-import {KEYPAIR_ALICE /*, KEYPAIR_BOB as KEYPAIR_BOB_S */} from './data/signing-keys';
-import {INPUT_STRING, SIGNCRYPTED} from './data/signcryption-tests';
+import { KEYPAIR, /*KEYPAIR_ALICE,*/ KEYPAIR_BOB, KEYPAIR_MALLORY } from './data/encryption-keys.js';
+import { KEYPAIR_ALICE /*, KEYPAIR_BOB as KEYPAIR_BOB_S */ } from './data/signing-keys.js';
+import { INPUT_STRING, SIGNCRYPTED } from './data/signcryption-tests.js';
 
-// @ts-ignore
-Signcryption.debug_fix_key = Buffer.alloc(32).fill('\x00');
-// @ts-ignore
-Signcryption.debug_fix_keypair = KEYPAIR;
+debugSetKey(Buffer.alloc(32).fill('\x00'));
+debugSetKeypair(KEYPAIR);
 
 test('encrypt', async () => {
     const encrypted = await signcrypt(INPUT_STRING, KEYPAIR_ALICE, [

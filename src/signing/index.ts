@@ -1,13 +1,13 @@
 
-import SignedMessageHeader from './header';
-import SignedMessagePayload from './payload';
-import {chunkBuffer} from '../util';
-import {Transform, Readable, TransformCallback} from 'stream';
-import * as tweetnacl from 'tweetnacl';
+import SignedMessageHeader from './header.js';
+import SignedMessagePayload from './payload.js';
+import { chunkBuffer } from '../util.js';
+import { Transform, Readable, TransformCallback } from 'stream';
+import tweetnacl from 'tweetnacl';
 import * as msgpack from '@msgpack/msgpack';
-import {DataViewIndexOutOfBoundsError} from '@msgpack/msgpack/dist/Decoder';
+import { DataViewIndexOutOfBoundsError } from '@msgpack/msgpack/dist/Decoder';
 
-export let debug = false;
+let debug = false;
 
 export const CHUNK_LENGTH = 1024 * 1024;
 
@@ -181,7 +181,7 @@ export class VerifyStream extends Transform {
             }
         } catch (err) {
             if (!(err instanceof DataViewIndexOutOfBoundsError)) {
-                return callback(err);
+                return callback(err as Error);
             }
         }
 
@@ -233,7 +233,7 @@ export class VerifyStream extends Transform {
                 throw new Error('No signed payloads, message truncated?');
             }
         } catch (err) {
-            return callback(err);
+            return callback(err as Error);
         }
 
         callback();

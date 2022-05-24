@@ -1,7 +1,7 @@
 
-import SignedMessageHeader from './header';
+import SignedMessageHeader from './header.js';
 import * as crypto from 'crypto';
-import * as tweetnacl from 'tweetnacl';
+import tweetnacl from 'tweetnacl';
 import * as msgpack from '@msgpack/msgpack';
 
 // [
@@ -43,7 +43,10 @@ export default class SignedMessagePayload {
         if (typeof index === 'number') index = BigInt(index);
 
         const sign_data = this.generateSignData(header.hash, index, final, data);
-        const signature = tweetnacl.sign.detached(sign_data, private_key);
+        const signature = tweetnacl.sign.detached(
+            Uint8Array.from(sign_data),
+            Uint8Array.from(private_key),
+        );
 
         return new this(final, signature, data);
     }
@@ -95,7 +98,11 @@ export default class SignedMessagePayload {
     verify(header: SignedMessageHeader, public_key: Uint8Array, index: bigint) {
         const sign_data = SignedMessagePayload.generateSignData(header.hash, index, this.final, this.data);
 
-        if (!tweetnacl.sign.detached.verify(sign_data, this.signature, public_key)) {
+        if (!tweetnacl.sign.detached.verify(
+            Uint8Array.from(sign_data),
+            Uint8Array.from(this.signature),
+            Uint8Array.from(public_key),
+        )) {
             throw new Error('Invalid signature');
         }
     }

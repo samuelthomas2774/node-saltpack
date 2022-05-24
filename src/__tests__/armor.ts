@@ -5,10 +5,10 @@ import {
     encodeBlock, decodeBlock,
     Options,
     efficientCharsSizes,
-} from '../armor';
+} from '../armor.js';
 
-import {INPUT_STRING} from './data/common';
-import {ENCRYPTED} from './data/encryption-tests';
+import { INPUT_STRING } from './data/common.js';
+import { ENCRYPTED } from './data/encryption-tests.js';
 
 const ARMORED = 'BEGIN SALTPACK MESSAGE. K1pqnxb2DkrYwTF eoRpTHfQUiQ8Vhv QcqV2Ijl5OgvHQQ KXoeeJBRilQ1udq ' +
     'YjHoEWwyIgddRVZ SEswTz7nRxdPdgd RVjkX80hz6eArwG S2IaonQ5sEZH3Ia 5qxopd0rWOSAd4W 1MLaAPG3aIif4yU ' +

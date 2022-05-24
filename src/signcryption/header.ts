@@ -1,9 +1,10 @@
 
-import Header, {MessageType} from '../message-header';
-import SigncryptedMessageRecipient from './recipient';
+import Header, { MessageType } from '../message-header.js';
+import SigncryptedMessageRecipient from './recipient.js';
 import * as crypto from 'crypto';
-import * as tweetnacl from 'tweetnacl';
+import tweetnacl from 'tweetnacl';
 import * as msgpack from '@msgpack/msgpack';
+import { isBufferOrUint8Array } from '../util.js';
 
 export default class SigncryptedMessageHeader extends Header {
     static readonly SENDER_KEY_SECRETBOX_NONCE = Buffer.from('saltpack_sender_key_sbox');
@@ -21,10 +22,10 @@ export default class SigncryptedMessageHeader extends Header {
     constructor(public_key: Uint8Array, sender_secretbox: Uint8Array, recipients: SigncryptedMessageRecipient[]) {
         super();
 
-        if (!(public_key instanceof Uint8Array) || public_key.length !== 32) {
+        if (!isBufferOrUint8Array(public_key) || public_key.length !== 32) {
             throw new TypeError('public_key must be a 32 byte Uint8Array');
         }
-        if (!(sender_secretbox instanceof Uint8Array) || sender_secretbox.length !== 48) {
+        if (!isBufferOrUint8Array(sender_secretbox) || sender_secretbox.length !== 48) {
             throw new TypeError('sender_secretbox must be a 48 byte Uint8Array');
         }
 
@@ -53,11 +54,11 @@ export default class SigncryptedMessageHeader extends Header {
         recipients: SigncryptedMessageRecipient[]
     ) {
         if (sender_public_key !== null &&
-            (!(sender_public_key instanceof Uint8Array) || sender_public_key.length !== 32)
+            (!isBufferOrUint8Array(sender_public_key) || sender_public_key.length !== 32)
         ) {
             throw new TypeError('sender_public_key must be a 32 byte Uint8Array');
         }
-        if (!(payload_key instanceof Uint8Array) || payload_key.length !== 32) {
+        if (!isBufferOrUint8Array(payload_key) || payload_key.length !== 32) {
             throw new TypeError('payload_key must be a 32 byte Uint8Array');
         }
 
@@ -68,7 +69,9 @@ export default class SigncryptedMessageHeader extends Header {
         // 3. Encrypt the sender's long-term public key signing key using crypto_secretbox with the payload key and
         // the nonce saltpack_sender_key_sbox, to create the sender secretbox.
         const sender_secretbox = tweetnacl.secretbox(
-            sender_public_key, SigncryptedMessageHeader.SENDER_KEY_SECRETBOX_NONCE, payload_key
+            Uint8Array.from(sender_public_key),
+            Uint8Array.from(SigncryptedMessageHeader.SENDER_KEY_SECRETBOX_NONCE),
+            Uint8Array.from(payload_key),
         );
 
         return new this(public_key, sender_secretbox, recipients);
@@ -180,7 +183,9 @@ export default class SigncryptedMessageHeader extends Header {
 
     decryptSender(payload_key: Uint8Array): Uint8Array | null {
         const sender_public_key = tweetnacl.secretbox.open(
-            this.sender_secretbox, SigncryptedMessageHeader.SENDER_KEY_SECRETBOX_NONCE, payload_key
+            Uint8Array.from(this.sender_secretbox),
+            Uint8Array.from(SigncryptedMessageHeader.SENDER_KEY_SECRETBOX_NONCE),
+            Uint8Array.from(payload_key),
         );
 
         if (!sender_public_key) {

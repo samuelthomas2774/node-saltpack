@@ -1,8 +1,5 @@
 
-// @ts-ignore
-global.Uint8Array = Buffer.__proto__;
-
-import {armor, MessageType} from '../armor';
+import { armor, MessageType } from '../armor.js';
 import {
     encryptAndArmor, dearmorAndDecrypt,
     EncryptAndArmorStream, DearmorAndDecryptStream,
@@ -10,29 +7,25 @@ import {
     SignAndArmorStream, DearmorAndVerifyStream,
     signcryptAndArmor, dearmorAndDesigncrypt,
     SigncryptAndArmorStream, DearmorAndDesigncryptStream,
-} from '../with-armor';
-import * as Encryption from '../encryption';
-import SignedMessageHeader from '../signing/header';
-import * as Signcryption from '../signcryption';
+} from '../with-armor.js';
+import SignedMessageHeader from '../signing/header.js';
+import { debugSetKey as debugSetEncryptionKey, debugSetKeypair as debugSetEncryptionKeypair } from '../encryption/index.js';
+import { debugSetKey as debugSetSigncryptionKey, debugSetKeypair as debugSetSigncryptionKeypair } from '../signcryption/index.js';
 
-import {INPUT_STRING} from './data/common';
-import {KEYPAIR as ENCRYPTION_KEYPAIR, KEYPAIR_ALICE, KEYPAIR_BOB, KEYPAIR_MALLORY} from './data/encryption-keys';
-import {ENCRYPTED} from './data/encryption-tests';
-import {KEYPAIR as SIGNING_KEYPAIR, KEYPAIR_ALICE as KEYPAIR_ALICE_S} from './data/signing-keys';
-import {SIGNED} from './data/signing-tests';
-import {SIGNCRYPTED} from './data/signcryption-tests';
+import { INPUT_STRING } from './data/common.js';
+import { KEYPAIR as ENCRYPTION_KEYPAIR, KEYPAIR_ALICE, KEYPAIR_BOB, KEYPAIR_MALLORY } from './data/encryption-keys.js';
+import { ENCRYPTED } from './data/encryption-tests.js';
+import { KEYPAIR as SIGNING_KEYPAIR, KEYPAIR_ALICE as KEYPAIR_ALICE_S } from './data/signing-keys.js';
+import { SIGNED } from './data/signing-tests.js';
+import { SIGNCRYPTED } from './data/signcryption-tests.js';
 
-// @ts-ignore
-Encryption.debug_fix_key = Buffer.alloc(32).fill('\x00');
-// @ts-ignore
-Encryption.debug_fix_keypair = ENCRYPTION_KEYPAIR;
+debugSetEncryptionKey(Buffer.alloc(32).fill('\x00'));
+debugSetEncryptionKeypair(ENCRYPTION_KEYPAIR);
 
 SignedMessageHeader.debug_fix_nonce = Buffer.alloc(32).fill('\x00');
 
-// @ts-ignore
-Signcryption.debug_fix_key = Buffer.alloc(32).fill('\x00');
-// @ts-ignore
-Signcryption.debug_fix_keypair = ENCRYPTION_KEYPAIR;
+debugSetSigncryptionKey(Buffer.alloc(32).fill('\x00'));
+debugSetSigncryptionKeypair(ENCRYPTION_KEYPAIR);
 
 describe('encryption', () => {
     test('encryption and armoring', async () => {

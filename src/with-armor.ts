@@ -1,14 +1,14 @@
 
-import {encrypt, decrypt, EncryptStream, DecryptStream, DecryptResult} from './encryption';
+import { encrypt, decrypt, EncryptStream, DecryptStream, DecryptResult } from './encryption/index.js';
 import {
     sign, verify, SignStream, VerifyStream, VerifyResult, signDetached, verifyDetached, VerifyDetachedResult,
-} from './signing';
-import {signcrypt, designcrypt, SigncryptStream, DesigncryptStream, DesigncryptResult} from './signcryption';
+} from './signing/index.js';
+import { signcrypt, designcrypt, SigncryptStream, DesigncryptStream, DesigncryptResult } from './signcryption/index.js';
 import {
     armor, dearmor, ArmorStream, DearmorStream, Options as ArmorOptions, MessageType, ArmorHeaderInfo, DearmorResult,
-} from './armor';
-import * as tweetnacl from 'tweetnacl';
-import Pumpify = require('pumpify');
+} from './armor.js';
+import tweetnacl from 'tweetnacl';
+import Pumpify from 'pumpify';
 
 export async function encryptAndArmor(
     data: Uint8Array | string, keypair: tweetnacl.BoxKeyPair | null, recipients_keys: Uint8Array[]

@@ -1,5 +1,5 @@
 
-export {INPUT_STRING} from './common';
+export { INPUT_STRING } from './common.js';
 
 // Signed with a hardcoded keypair (in signing-keys.ts)
 

@@ -8,9 +8,9 @@ export {
     DearmorResult,
     ArmorHeaderInfo,
     Options as ArmorOptions,
-} from './armor';
+} from './armor.js';
 
-export {MessageType} from './message-header';
+export { MessageType } from './message-header.js';
 
 export {
     encrypt,
@@ -20,7 +20,7 @@ export {
     DecryptStream,
 
     DecryptResult,
-} from './encryption';
+} from './encryption/index.js';
 
 export {
     sign,
@@ -31,7 +31,7 @@ export {
 
     signDetached,
     verifyDetached,
-} from './signing';
+} from './signing/index.js';
 
 export {
     signcrypt,
@@ -41,7 +41,7 @@ export {
     DesigncryptStream,
 
     DesigncryptResult,
-} from './signcryption';
+} from './signcryption/index.js';
 
 export {
     encryptAndArmor,
@@ -65,4 +65,4 @@ export {
     DearmorAndDesigncryptResult,
     SigncryptAndArmorStream,
     DearmorAndDesigncryptStream,
-} from './with-armor';
+} from './with-armor.js';

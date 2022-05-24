@@ -1,8 +1,8 @@
 
-import {MessageType as Mode} from './message-header';
-import {chunkBuffer, chunkString} from './util';
-import {Transform, TransformCallback} from 'stream';
-import chunk = require('lodash.chunk');
+import { MessageType as Mode } from './message-header';
+import { chunkBuffer, chunkString } from './util';
+import { Transform, TransformCallback } from 'stream';
+import chunk from 'lodash.chunk';
 
 export let debug = false;
 

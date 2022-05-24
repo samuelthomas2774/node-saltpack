@@ -1,22 +1,29 @@
 
-import SigncryptedMessageHeader from './header';
-import SigncryptedMessageRecipient from './recipient';
-import SigncryptedMessagePayload from './payload';
-import {chunkBuffer} from '../util';
-import {Readable, Transform, TransformCallback} from 'stream';
+import SigncryptedMessageHeader from './header.js';
+import SigncryptedMessageRecipient from './recipient.js';
+import SigncryptedMessagePayload from './payload.js';
+import { chunkBuffer } from '../util';
+import { Readable, Transform, TransformCallback } from 'stream';
 import * as crypto from 'crypto';
 import * as util from 'util';
-import * as tweetnacl from 'tweetnacl';
+import tweetnacl from 'tweetnacl';
 import * as msgpack from '@msgpack/msgpack';
-import {DataViewIndexOutOfBoundsError} from '@msgpack/msgpack/dist/Decoder';
+import { DataViewIndexOutOfBoundsError } from '@msgpack/msgpack/dist/Decoder';
 
 const randomBytes = util.promisify(crypto.randomBytes);
 
 const CHUNK_LENGTH = 1024 * 1024;
 
-export let debug = false;
-export let debug_fix_key: Buffer | null = null;
-export let debug_fix_keypair: tweetnacl.BoxKeyPair | null = null;
+let debug = false;
+let debug_fix_key: Buffer | null = null;
+let debug_fix_keypair: tweetnacl.BoxKeyPair | null = null;
+
+export function debugSetKey(key: Buffer) {
+    debug_fix_key = key;
+}
+export function debugSetKeypair(keypair: tweetnacl.BoxKeyPair) {
+    debug_fix_keypair = keypair;
+}
 
 export async function signcrypt(
     data: Uint8Array | string, keypair: tweetnacl.SignKeyPair | null, recipients_keys: Uint8Array[]
@@ -244,7 +251,7 @@ export class DesigncryptStream extends Transform {
             }
         } catch (err) {
             if (!(err instanceof DataViewIndexOutOfBoundsError)) {
-                return callback(err);
+                return callback(err as Error);
             }
         }
 
@@ -302,7 +309,7 @@ export class DesigncryptStream extends Transform {
                 throw new Error('No signcrypted payloads, message truncated?');
             }
         } catch (err) {
-            return callback(err);
+            return callback(err as Error);
         }
 
         callback();

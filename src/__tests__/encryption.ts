@@ -1,17 +1,11 @@
 
-// @ts-ignore
-global.Uint8Array = Buffer.__proto__;
+import { encrypt, decrypt, EncryptStream, DecryptStream, debugSetKeypair, debugSetKey } from '../encryption/index.js';
 
-import * as Encryption from '../encryption';
-import {encrypt, decrypt, EncryptStream, DecryptStream} from '../encryption';
+import { KEYPAIR, KEYPAIR_ALICE, KEYPAIR_BOB, KEYPAIR_MALLORY } from './data/encryption-keys.js';
+import { INPUT_STRING, ENCRYPTED } from './data/encryption-tests.js';
 
-import {KEYPAIR, KEYPAIR_ALICE, KEYPAIR_BOB, KEYPAIR_MALLORY} from './data/encryption-keys';
-import {INPUT_STRING, ENCRYPTED} from './data/encryption-tests';
-
-// @ts-ignore
-Encryption.debug_fix_key = Buffer.alloc(32).fill('\x00');
-// @ts-ignore
-Encryption.debug_fix_keypair = KEYPAIR;
+debugSetKey(Buffer.alloc(32).fill('\x00'));
+debugSetKeypair(KEYPAIR);
 
 test('encrypt', async () => {
     const encrypted = await encrypt(INPUT_STRING, KEYPAIR_ALICE, [

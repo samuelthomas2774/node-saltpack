@@ -12,6 +12,7 @@
         "url": "https://samuelthomas2774.github.io"
     },
     "main": "dist/index.js",
+    "type": "module",
     "types": "dist/index.d.ts",
     "repository": {
         "type": "git",
@@ -23,7 +24,7 @@
         "!dist/__tests__"
     ],
     "engines": {
-        "node": "^10.0.0 || ^12.0.0 || ^14.0.0"
+        "node": "^12.0.0 || >=14.0.0"
     },
     "dependencies": {
         "@msgpack/msgpack": "^1.12.2",
@@ -34,13 +35,13 @@
     "devDependencies": {
         "@types/jest": "^26.0.5",
         "@types/lodash.chunk": "^4.2.6",
-        "@types/node": "^12.12.50",
+        "@types/node": "^16.11.36",
         "@types/pumpify": "^1.4.1",
         "jest": "^26.1.0",
         "typescript": "^3.9.7"
     },
     "scripts": {
-        "test": "jest dist/__tests__/**.js --color --verbose"
+        "test": "node --experimental-vm-modules node_modules/jest/bin/jest.js dist/__tests__/**.js --color --verbose"
     },
     "publishConfig": {
         "access": "public"
