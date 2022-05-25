@@ -1,6 +1,6 @@
 
-import { MessageType as Mode } from './message-header';
-import { chunkBuffer, chunkString } from './util';
+import { MessageType as Mode } from './message-header.js';
+import { chunkBuffer, chunkString } from './util.js';
 import { Transform, TransformCallback } from 'stream';
 import chunk from 'lodash.chunk';
 

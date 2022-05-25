@@ -2,7 +2,7 @@
 import SigncryptedMessageHeader from './header.js';
 import SigncryptedMessageRecipient from './recipient.js';
 import SigncryptedMessagePayload from './payload.js';
-import { chunkBuffer } from '../util';
+import { chunkBuffer } from '../util.js';
 import { Readable, Transform, TransformCallback } from 'stream';
 import * as crypto from 'crypto';
 import * as util from 'util';

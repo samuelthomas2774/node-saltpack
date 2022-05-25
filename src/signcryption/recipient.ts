@@ -1,7 +1,7 @@
 
 import * as crypto from 'crypto';
 import tweetnacl from 'tweetnacl';
-import { isBufferOrUint8Array } from '../util';
+import { isBufferOrUint8Array } from '../util.js';
 
 export default class SigncryptedMessageRecipient {
     static readonly SHARED_KEY_NONCE = Buffer.from('saltpack_derived_sboxkey');

@@ -1,7 +1,7 @@
 
 import * as crypto from 'crypto';
 import tweetnacl from 'tweetnacl';
-import { isBufferOrUint8Array } from '../util';
+import { isBufferOrUint8Array } from '../util.js';
 
 export default class EncryptedMessageRecipient {
     static readonly PAYLOAD_KEY_BOX_NONCE_PREFIX_V2 = Buffer.from('saltpack_recipsb');
