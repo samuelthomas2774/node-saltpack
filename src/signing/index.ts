@@ -5,7 +5,7 @@ import { chunkBuffer } from '../util.js';
 import { Transform, Readable, TransformCallback } from 'stream';
 import tweetnacl from 'tweetnacl';
 import * as msgpack from '@msgpack/msgpack';
-import { DataViewIndexOutOfBoundsError } from '@msgpack/msgpack/dist/Decoder';
+import { DataViewIndexOutOfBoundsError } from '@msgpack/msgpack/dist/Decoder.js';
 
 let debug = false;
 
