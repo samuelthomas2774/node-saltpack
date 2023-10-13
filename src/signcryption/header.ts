@@ -165,14 +165,26 @@ export default class SigncryptedMessageHeader extends Header {
         // of the recipient entries match, decrypt the payload key. If not, decryption fails, and the client should
         // report that the current user isn't a recipient of this message.
 
-        const identifier = recipient_identifier ?
-            recipient_identifier instanceof Buffer ? recipient_identifier : Buffer.from(recipient_identifier) :
-            null;
+        const derived_key = crypto
+            .createHmac('sha512', SigncryptedMessageRecipient.HMAC_KEY_SYMMETRIC)
+            .update(this.public_key)
+            .update(shared_symmetric_key)
+            .digest()
+            .slice(0, 32);
+
+        const identifier = recipient_identifier
+            ? recipient_identifier instanceof Buffer
+                ? recipient_identifier
+                : Buffer.from(recipient_identifier)
+            : null;
+        // console.log(identifier);
+        // console.log(this.recipients);
 
         for (const recipient of this.recipients) {
             if (identifier && !identifier.equals(recipient.recipient_identifier)) continue;
 
-            const payload_key = recipient.decryptPayloadKey(shared_symmetric_key);
+            const payload_key = recipient.decryptPayloadKey(derived_key);
+
             if (!payload_key) continue;
 
             return [payload_key, recipient];

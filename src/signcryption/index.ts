@@ -1,6 +1,8 @@
 
 import SigncryptedMessageHeader from './header.js';
-import SigncryptedMessageRecipient from './recipient.js';
+import SigncryptedMessageRecipient, {
+    SymmetricKeyRecipient,
+} from './recipient.js';
 import SigncryptedMessagePayload from './payload.js';
 import { chunkBuffer } from '../util.js';
 import { Readable, Transform, TransformCallback } from 'stream';
@@ -26,7 +28,7 @@ export function debugSetKeypair(keypair: tweetnacl.BoxKeyPair) {
 }
 
 export async function signcrypt(
-    data: Uint8Array | string, keypair: tweetnacl.SignKeyPair | null, recipients_keys: Uint8Array[]
+    data: Uint8Array | string, keypair: tweetnacl.SignKeyPair | null, recipients_keys: Uint8Array[], symmetric_key_recipients?: SymmetricKeyRecipient[]
 ): Promise<Buffer> {
     const chunks = chunkBuffer(data, CHUNK_LENGTH);
 
@@ -39,6 +41,18 @@ export async function signcrypt(
     const recipients = recipients_keys.map((key, index) => {
         return SigncryptedMessageRecipient.create(key, ephemeral_keypair.secretKey, payload_key, index);
     });
+
+    symmetric_key_recipients?.forEach(
+        (recipient, index) => {
+            const recipientInstance = SigncryptedMessageRecipient.createSymmetric(
+                recipient,
+                ephemeral_keypair.publicKey,
+                payload_key,
+                index + recipients_keys.length
+            );
+            recipients.push(recipientInstance);
+        }
+    );
 
     const header = SigncryptedMessageHeader.create(
         ephemeral_keypair.publicKey, payload_key, keypair?.publicKey ?? null, recipients
@@ -71,7 +85,7 @@ export class SigncryptStream extends Transform {
     private payload_index = BigInt(0);
     private i = 0;
 
-    constructor(keypair: tweetnacl.SignKeyPair | null, recipients_keys: Uint8Array[]) {
+    constructor(keypair: tweetnacl.SignKeyPair | null, recipients_keys: Uint8Array[], symmetric_key_recipients?: SymmetricKeyRecipient[]) {
         super();
 
         // 1. Generate a random 32-byte payload key.
@@ -85,6 +99,18 @@ export class SigncryptStream extends Transform {
         const recipients = recipients_keys.map((key, index) => {
             return SigncryptedMessageRecipient.create(key, this.ephemeral_keypair.secretKey, this.payload_key, index);
         });
+
+        symmetric_key_recipients?.forEach(
+            (recipient, index) => {
+                const recipientInstance = SigncryptedMessageRecipient.createSymmetric(
+                    recipient,
+                    this.ephemeral_keypair.publicKey,
+                    this.payload_key,
+                    index + recipients_keys.length
+                );
+                recipients.push(recipientInstance);
+            }
+        );
 
         this.header = SigncryptedMessageHeader.create(
             this.ephemeral_keypair.publicKey, this.payload_key, this.keypair?.publicKey ?? null, recipients
@@ -154,7 +180,7 @@ export interface DesigncryptResult extends Buffer {
 }
 
 export async function designcrypt(
-    signcrypted: Uint8Array, keypair: tweetnacl.BoxKeyPair, sender?: Uint8Array | null
+    signcrypted: Uint8Array, keypair_or_symmetric_key_recipient: tweetnacl.BoxKeyPair | SymmetricKeyRecipient, sender?: Uint8Array | null
 ): Promise<DesigncryptResult> {
     const stream = new Readable();
     stream.push(signcrypted);
@@ -169,9 +195,30 @@ export async function designcrypt(
     const header_data = items.shift() as any;
     const header = SigncryptedMessageHeader.decode(header_data, true);
 
-    // TODO: handle other recipient types
-    const payload_key_and_recipient = header.decryptPayloadKeyWithCurve25519Keypair(keypair.secretKey);
-    if (!payload_key_and_recipient) throw new Error('keypair is not an intended recipient');
+    let payload_key_and_recipient:
+        | [Uint8Array, SigncryptedMessageRecipient]
+        | null;
+
+    if (Boolean((keypair_or_symmetric_key_recipient as tweetnacl.BoxKeyPair).secretKey)) {
+        const keypair = keypair_or_symmetric_key_recipient as tweetnacl.BoxKeyPair;
+        payload_key_and_recipient = header.decryptPayloadKeyWithCurve25519Keypair(
+            keypair.secretKey
+        );
+
+        if (!payload_key_and_recipient)
+            throw new Error('keypair is not an intended recipient');
+    } else {
+        const recipient =
+            keypair_or_symmetric_key_recipient as SymmetricKeyRecipient;
+        payload_key_and_recipient = header.decryptPayloadKeyWithSymmetricKey(
+            recipient.key,
+            recipient.identifier
+        );
+
+        if (!payload_key_and_recipient)
+            throw new Error('symmetric key is not an intended recipient');
+    }
+
     const [payload_key, recipient] = payload_key_and_recipient;
     const sender_public_key = header.decryptSender(payload_key);
 
@@ -215,7 +262,7 @@ export class DesigncryptStream extends Transform {
     private payload_index = BigInt(-1);
     private i = 0;
 
-    constructor(readonly keypair: tweetnacl.BoxKeyPair, sender?: Uint8Array | null) {
+    constructor(readonly keypair_or_symmetric_key_recipient: tweetnacl.BoxKeyPair | SymmetricKeyRecipient, sender?: Uint8Array | null) {
         super();
 
         this.sender = sender ?? null;
@@ -264,15 +311,35 @@ export class DesigncryptStream extends Transform {
         if (!this.header_data) {
             const header = SigncryptedMessageHeader.decode(data as any, true);
 
-            // TODO: handle other recipient types
-            const payload_key_and_recipient = header.decryptPayloadKeyWithCurve25519Keypair(this.keypair.secretKey);
-            if (!payload_key_and_recipient) throw new Error('keypair is not an intended recipient');
+            let payload_key_and_recipient:
+                | [Uint8Array, SigncryptedMessageRecipient]
+                | null;
+
+            if (Boolean((this.keypair_or_symmetric_key_recipient as tweetnacl.BoxKeyPair).secretKey)) {
+                const keypair = this.keypair_or_symmetric_key_recipient as tweetnacl.BoxKeyPair;
+                payload_key_and_recipient = header.decryptPayloadKeyWithCurve25519Keypair(
+                    keypair.secretKey
+                );
+
+                if (!payload_key_and_recipient)
+                    throw new Error('keypair is not an intended recipient');
+            } else {
+                const recipient = this.keypair_or_symmetric_key_recipient as SymmetricKeyRecipient;
+                payload_key_and_recipient = header.decryptPayloadKeyWithSymmetricKey(
+                    recipient.key,
+                    recipient.identifier
+                );
+
+                if (!payload_key_and_recipient)
+                    throw new Error('symmetric key is not an intended recipient');
+            }
+
             const [payload_key, recipient] = payload_key_and_recipient;
             const sender_public_key = header.decryptSender(payload_key);
 
             if (this.sender && (!sender_public_key || !Buffer.from(sender_public_key).equals(this.sender))) {
                 throw new Error('Sender public key doesn\'t match');
-            }        
+            }
 
             this.header_data = [header, payload_key, recipient, sender_public_key];
         } else {

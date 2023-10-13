@@ -3,9 +3,15 @@ import * as crypto from 'crypto';
 import tweetnacl from 'tweetnacl';
 import { isBufferOrUint8Array } from '../util.js';
 
+export type SymmetricKeyRecipient = {
+    key: Uint8Array;
+    identifier: Uint8Array;
+};
+
 export default class SigncryptedMessageRecipient {
     static readonly SHARED_KEY_NONCE = Buffer.from('saltpack_derived_sboxkey');
     static readonly HMAC_KEY = Buffer.from('saltpack signcryption box key identifier');
+    static readonly HMAC_KEY_SYMMETRIC = Buffer.from('saltpack signcryption derived symmetric key');
     static readonly PAYLOAD_KEY_BOX_NONCE_PREFIX_V2 = Buffer.from('saltpack_recipsb');
 
     readonly recipient_identifier: Uint8Array;
@@ -57,6 +63,33 @@ export default class SigncryptedMessageRecipient {
         );
 
         return new this(recipient_identifier, /*shared_symmetric_key,*/ encrypted_payload_key, index);
+    }
+
+    static createSymmetric(
+        recipient: SymmetricKeyRecipient,
+        ephemeral_public_key: Uint8Array,
+        payload_key: Uint8Array,
+        index: number | bigint
+    ): SigncryptedMessageRecipient {
+        if (typeof index === 'number') index = BigInt(index);
+
+        const recipient_index = this.generateRecipientIndex(index);
+        const derived_key = crypto
+            .createHmac('sha512', this.HMAC_KEY_SYMMETRIC)
+            .update(ephemeral_public_key)
+            .update(recipient.key)
+            .digest()
+            .slice(0, 32);
+
+        // Secretbox the payload key using this derived symmetric key, with the nonce saltpack_
+        // recipsbXXXXXXXX, where XXXXXXXX is the 8-byte big-endian unsigned recipient index.
+        const encrypted_payload_key = tweetnacl.secretbox(
+            Uint8Array.from(payload_key),
+            Uint8Array.from(recipient_index),
+            Uint8Array.from(derived_key)
+        );
+
+        return new this(recipient.identifier, encrypted_payload_key, index);
     }
 
     static from(
