@@ -1,92 +1,92 @@
-image: node:17
+image: node:20
 
 cache:
-    paths:
-        - node_modules/
+  paths:
+    - node_modules/
 
 before_script:
-    - npm --color="always" install
+  - npm --color="always" install
 
 build:
-    stage: build
-    script:
-        - npx tsc
-        - PACKAGE=`npm --color="always" pack`
-        - mv "$PACKAGE" saltpack.tgz
-    artifacts:
-        paths:
-            - dist
-            - saltpack.tgz
+  stage: build
+  script:
+    - npx tsc
+    - PACKAGE=`npm --color="always" pack`
+    - mv "$PACKAGE" saltpack.tgz
+  artifacts:
+    paths:
+      - dist
+      - saltpack.tgz
 
 test:
-    image: node:$NODE_VERSION
-    script:
-        - npm run test
-    dependencies:
-        - build
-    parallel:
-        matrix:
-            - NODE_VERSION: [14, 16, 17, 18]
+  image: node:$NODE_VERSION
+  script:
+    - npm run test
+  dependencies:
+    - build
+  parallel:
+    matrix:
+      - NODE_VERSION: [18, 20, 21]
 
 publish-npm:
-    stage: deploy
-    script:
-        - echo "//registry.npmjs.org/:_authToken=${NPM_TOKEN}" > .npmrc
-        - npm --color="always" publish
-    dependencies:
-        - build
-    only:
-        refs:
-            - /^v.*$/
-        variables:
-            - $NPM_TOKEN
-    except:
-        - branches
-    cache:
-        paths:
-            - node_modules/
-        policy: pull
+  stage: deploy
+  script:
+    - echo "//registry.npmjs.org/:_authToken=${NPM_TOKEN}" > .npmrc
+    - npm --color="always" publish
+  dependencies:
+    - build
+  only:
+    refs:
+      - /^v.*$/
+    variables:
+      - $NPM_TOKEN
+  except:
+    - branches
+  cache:
+    paths:
+      - node_modules/
+    policy: pull
 
 publish-github:
-    stage: deploy
-    script:
-        # Update the package.json and package-lock.json
-        # GitHub Package Repository now requires the `repository` field is the GitHub repository
-        # This means the package publish to GitHub is different to the package published everywhere else
-        - "node -e \"fs.writeFileSync('package.json', JSON.stringify((json => {json.repository = {type: 'git', url: 'https://github.com/' + process.env.GITHUB_REPOSITORY + '.git'}; return json;})(JSON.parse(fs.readFileSync('package.json', 'utf-8'))), null, 4) + '\\n', 'utf-8')\""
+  stage: deploy
+  script:
+    # Update the package.json and package-lock.json
+    # GitHub Package Repository now requires the `repository` field is the GitHub repository
+    # This means the package publish to GitHub is different to the package published everywhere else
+    - "node -e \"fs.writeFileSync('package.json', JSON.stringify((json => {json.repository = {type: 'git', url: 'https://github.com/' + process.env.GITHUB_REPOSITORY + '.git'}; return json;})(JSON.parse(fs.readFileSync('package.json', 'utf-8'))), null, 4) + '\\n', 'utf-8')\""
 
-        - echo "//npm.pkg.github.com/:_authToken=${GITHUB_NPM_TOKEN}" > .npmrc
-        - npm --color="always" --registry=https://npm.pkg.github.com/ publish
-    dependencies:
-        - build
-    only:
-        refs:
-            - /^v.*$/
-        variables:
-            - $GITHUB_REPOSITORY
-            - $GITHUB_NPM_TOKEN
-    except:
-        - branches
-    cache:
-        paths:
-            - node_modules/
-        policy: pull
+    - echo "//npm.pkg.github.com/:_authToken=${GITHUB_NPM_TOKEN}" > .npmrc
+    - npm --color="always" --registry=https://npm.pkg.github.com/ publish
+  dependencies:
+    - build
+  only:
+    refs:
+      - /^v.*$/
+    variables:
+      - $GITHUB_REPOSITORY
+      - $GITHUB_NPM_TOKEN
+  except:
+    - branches
+  cache:
+    paths:
+      - node_modules/
+    policy: pull
 
 publish-gitlab:
-    stage: deploy
-    script:
-        - echo "${CI_API_V4_URL}/projects/${CI_PROJECT_ID}/packages/npm/:_authToken=${CI_JOB_TOKEN}" | sed s/^https:// > .npmrc
-        - npm --color="always" --registry=${CI_API_V4_URL}/projects/${CI_PROJECT_ID}/packages/npm/ publish
-    dependencies:
-        - build
-    only:
-        refs:
-            - /^v.*$/
-        variables:
-            - $GITLAB_NPM_PUBLISH
-    except:
-        - branches
-    cache:
-        paths:
-            - node_modules/
-        policy: pull
+  stage: deploy
+  script:
+    - echo "${CI_API_V4_URL}/projects/${CI_PROJECT_ID}/packages/npm/:_authToken=${CI_JOB_TOKEN}" | sed s/^https:// > .npmrc
+    - npm --color="always" --registry=${CI_API_V4_URL}/projects/${CI_PROJECT_ID}/packages/npm/ publish
+  dependencies:
+    - build
+  only:
+    refs:
+      - /^v.*$/
+    variables:
+      - $GITLAB_NPM_PUBLISH
+  except:
+    - branches
+  cache:
+    paths:
+      - node_modules/
+    policy: pull
