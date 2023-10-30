@@ -69,3 +69,7 @@ export {
     SigncryptAndArmorStream,
     DearmorAndDesigncryptStream,
 } from './with-armor.js';
+
+export {
+    PaperKey as KeybasePaperKey,
+} from './kb-paperkeys.js';
