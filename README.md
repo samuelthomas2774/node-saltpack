@@ -371,6 +371,35 @@ stream.end('BEGIN SALTPACK ENCRYPTED MESSAGE. keDIDMQWYvVR58B FTfTeDQNHnhYI5G UX
 stream.pipe(process.stdout);
 ```
 
+Keybase paper keys
+---
+
+Keybase paper keys can be used with `KeybasePaperKey.from`.
+
+```ts
+import {dearmorAndDecrypt, KeybasePaperKey, signAndArmor} from '@samuelthomas2774/saltpack';
+
+const paper_key: string = '...';
+
+const keys = await KeybasePaperKey.from(paper_key);
+
+// Encryption
+const encrypted: string = 'BEGIN SALTPACK ENCRYPTED MESSAGE. keDIDMQWYvVR58B FTfTeD305h3lDop TELGyPzBAAawRfZ rss3XwjQHK0irv7 rNIcmnvmn5YlTtK 7O1fFPePZGpx46P ...';
+const recipient_keypair: tweetnacl.BoxKeyPair = keys.encryption_keypair;
+
+const decrypted = await dearmorAndDecrypt(encrypted, recipient_keypair);
+
+// decrypted === '...'
+
+// Signing
+const plaintext: Buffer | string = '...';
+const signing_keypair: tweetnacl.SignKeyPair = keys.signing_keypair;
+
+const signed = await signAndArmor(plaintext, signing_keypair);
+
+// signed === 'BEGIN SALTPACK SIGNED MESSAGE. kYM5h1pg6qz9UMn j6G9T0lmMjkYOsZ Kn4Acw58u39dn3B kmdpuvqpO3t2QdM CnBX5wO1ZIO8LTd knNlCR0WSEC0000 ...
+```
+
 Additional notes
 ---
 
