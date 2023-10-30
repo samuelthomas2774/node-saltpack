@@ -42,6 +42,9 @@ export {
 
     DesigncryptResult,
 } from './signcryption/index.js';
+export {
+    SymmetricKeyRecipient,
+} from './signcryption/recipient.js';
 
 export {
     encryptAndArmor,
