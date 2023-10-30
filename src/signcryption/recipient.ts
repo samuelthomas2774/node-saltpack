@@ -76,7 +76,9 @@ export default class SigncryptedMessageRecipient {
     ): SigncryptedMessageRecipient {
         if (typeof index === 'number') index = BigInt(index);
 
-        const recipient_index = this.generateRecipientIndex(index);
+        // For recipient symmetric keys, first derive a shared symmetric key. Concatenate the ephemeral
+        // public Curve25519 key and the recipient symmetric key, and HMAC-SHA512 them under the key saltpack
+        // signcryption derived symmetric key. The derived key is the first 32 bytes of that HMAC.
         const derived_key = crypto
             .createHmac('sha512', this.HMAC_KEY_SYMMETRIC)
             .update(ephemeral_public_key)
@@ -84,8 +86,10 @@ export default class SigncryptedMessageRecipient {
             .digest()
             .slice(0, 32);
 
-        // Secretbox the payload key using this derived symmetric key, with the nonce saltpack_
-        // recipsbXXXXXXXX, where XXXXXXXX is the 8-byte big-endian unsigned recipient index.
+        const recipient_index = this.generateRecipientIndex(index);
+
+        // Secretbox the payload key using this derived symmetric key, with the nonce saltpack_recipsbXXXXXXXX,
+        // where XXXXXXXX is the 8-byte big-endian unsigned recipient index.
         const encrypted_payload_key = tweetnacl.secretbox(
             Uint8Array.from(payload_key),
             Uint8Array.from(recipient_index),
