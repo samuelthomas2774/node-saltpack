@@ -267,7 +267,7 @@ Signcryption
 >
 > - The sender uses an Ed25519 signing key instead of an X25519 encryption key,
 > - A symmetric key can be provided for a group of recipients instead of each recipient having their own encryption
->     key (this is not implemented by node-saltpack yet, though the internal APIs are there), and
+>     key, and
 > - Messages are not repudiable, which means anyone who has a copy of the message and a decryption key can verify it's
 >     authenticity, not just intended recipients.
 
@@ -277,13 +277,12 @@ data as a string.
 `signcrypt` accepts the same arguments as `signcryptAndArmor` but returns a Buffer without armor.
 
 ```ts
-import {signcryptAndArmor} from '@samuelthomas2774/saltpack';
+import {signcryptAndArmor, SymmetricKeyRecipient} from '@samuelthomas2774/saltpack';
 import * as tweetnacl from 'tweetnacl';
 
 const plaintext: Buffer | string = '...';
 const sender_keypair: tweetnacl.SignKeyPair = tweetnacl.sign.keyPair();
-const recipients_keys: Uint8Array[] = [
-    // TODO: how can a recipient identifier and symmetric key be provided?
+const recipients_keys: (Uint8Array | SymmetricKeyRecipient)[] = [
     tweetnacl.box.keyPair().publicKey,
 ];
 
@@ -295,11 +294,11 @@ const signcrypted = await signcryptAndArmor(plaintext, sender_keypair, recipient
 Streaming is supported with `SigncryptAndArmorStream` or (`SigncryptStream` for encrypting without armor).
 
 ```ts
-import {SigncryptAndArmorStream} from '@samuelthomas2774/saltpack';
+import {SigncryptAndArmorStream, SymmetricKeyRecipient} from '@samuelthomas2774/saltpack';
 import * as tweetnacl from 'tweetnacl';
 
 const sender_keypair: tweetnacl.SignKeyPair = tweetnacl.sign.keyPair();
-const recipients_keys: Uint8Array[] = [
+const recipients_keys: (Uint8Array | SymmetricKeyRecipient)[] = [
     // TODO: how can a recipient identifier and symmetric key be provided?
     tweetnacl.box.keyPair().publicKey,
 ];
@@ -312,22 +311,38 @@ stream.end('...');
 stream.pipe(process.stdout);
 ```
 
+Symmetric recipient keys can be used by passing a `SymmetricKeyRecipient` instance. You must provide a
+unique 32-byte recipient identifier for each symmetric key recipient.
+
+```ts
+import {signcryptAndArmor, SymmetricKeyRecipient} from '@samuelthomas2774/saltpack';
+import * as tweetnacl from 'tweetnacl';
+
+const recipients_keys: (Uint8Array | SymmetricKeyRecipient)[] = [
+    new SymmetricKeyRecipient(
+        Buffer.from('0000000000000000000000000000000000000000000000000000000000000000', 'hex'), // recipient identifier
+        Buffer.from('0000000000000000000000000000000000000000000000000000000000000000', 'hex'), // shared symmetric key
+    ),
+];
+
+// Use signcrypt, signcryptAndArmor, SigncryptStream or SigncryptAndArmorStream...
+```
+
 Messages can be decrypted with `dearmorAndDesigncrypt` (or `designcrypt` if the message isn't armored).
 
 ```ts
-import {dearmorAndDesigncrypt} from '@samuelthomas2774/saltpack';
+import {dearmorAndDesigncrypt, SymmetricKeyRecipient} from '@samuelthomas2774/saltpack';
 import * as tweetnacl from 'tweetnacl';
 
 const encrypted: string = 'BEGIN SALTPACK ENCRYPTED MESSAGE. keDIDMQWYvVR58B FTfTeDQNHnhYI5G UXZkLqLqVvhmpfZ rss3XwjQHK0irv7 rNIcmnvmn5RTzTR OPZLLRr1s0DEZtS ...';
-// TODO: how can a recipient identifier and symmetric key be provided?
-// How can multiple keys be provided (as a recipient may have multiple shared symmetric keys that may be used for this message)
-const recipient_keypair: tweetnacl.BoxKeyPair = tweetnacl.box.keyPair();
+// TODO: how can multiple keys be provided (as a recipient may have multiple shared symmetric keys that may be used for this message)
+const recipient_keys: tweetnacl.BoxKeyPair | SymmetricKeyRecipient = tweetnacl.box.keyPair();
 
 // If you know the sender's public key you can pass it to dearmorAndDesigncrypt and it will throw if it doesn't match
 const sender_key: Uint8Array = tweetnacl.sign.keyPair().publicKey;
 
 try {
-    const decrypted = await dearmorAndDesigncrypt(encrypted, recipient_keypair, sender_key);
+    const decrypted = await dearmorAndDesigncrypt(encrypted, recipient_keys, sender_key);
 
     // If you didn't pass the sender's public key you should check it now
     if (!Buffer.from(decrypted.sender_public_key).equals(sender_keys)) {
@@ -343,17 +358,16 @@ try {
 Decryption also supports streaming with `DearmorAndDesigncryptStream` or `DesigncryptStream`.
 
 ```ts
-import {DearmorAndDesigncryptStream} from '@samuelthomas2774/saltpack';
+import {DearmorAndDesigncryptStream, SymmetricKeyRecipient} from '@samuelthomas2774/saltpack';
 import * as tweetnacl from 'tweetnacl';
 
-// TODO: how can a recipient identifier and symmetric key be provided?
-// How can multiple keys be provided (as a recipient may have multiple shared symmetric keys that may be used for this message)
-const recipient_keypair: tweetnacl.BoxKeyPair = tweetnacl.box.keyPair();
+// TODO: how can multiple keys be provided (as a recipient may have multiple shared symmetric keys that may be used for this message)
+const recipient_keys: tweetnacl.BoxKeyPair | SymmetricKeyRecipient = tweetnacl.box.keyPair();
 
 // If you know the sender's public key you can pass it to DearmorAndDesigncryptStream and it will emit an error if it doesn't match
 const sender_key: Uint8Array = tweetnacl.sign.keyPair().publicKey;
 
-const stream = new DearmorAndDesigncryptStream(recipient_keypair, sender_key);
+const stream = new DearmorAndDesigncryptStream(recipient_keys, sender_key);
 
 stream.on('end', () => {
     // If you didn't pass the sender's public key you should check it now
@@ -369,6 +383,22 @@ stream.end('BEGIN SALTPACK ENCRYPTED MESSAGE. keDIDMQWYvVR58B FTfTeDQNHnhYI5G UX
 
 // Write the decrypted data to stdout
 stream.pipe(process.stdout);
+```
+
+Symmetric keys can be used by passing a `SymmetricKeyRecipient` instance. You must provide the
+recipient's unique 32-byte recipient identifier.
+
+```ts
+import {dearmorAndDesigncrypt, SymmetricKeyRecipient} from '@samuelthomas2774/saltpack';
+import * as tweetnacl from 'tweetnacl';
+
+// TODO: how can multiple keys be provided (as a recipient may have multiple shared symmetric keys that may be used for this message)
+const recipient_keys: tweetnacl.BoxKeyPair | SymmetricKeyRecipient = new SymmetricKeyRecipient(
+    Buffer.from('0000000000000000000000000000000000000000000000000000000000000000', 'hex'), // recipient identifier
+    Buffer.from('0000000000000000000000000000000000000000000000000000000000000000', 'hex'), // shared symmetric key
+);
+
+// Use designcrypt, dearmorAndDesigncrypt, DesigncryptStream or DearmorAndDesigncryptStream...
 ```
 
 Additional notes
