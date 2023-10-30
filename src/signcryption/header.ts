@@ -172,13 +172,7 @@ export default class SigncryptedMessageHeader extends Header {
             .digest()
             .slice(0, 32);
 
-        const identifier = recipient_identifier
-            ? recipient_identifier instanceof Buffer
-                ? recipient_identifier
-                : Buffer.from(recipient_identifier)
-            : null;
-        // console.log(identifier);
-        // console.log(this.recipients);
+        const identifier = recipient_identifier ? Buffer.from(recipient_identifier) : null;
 
         for (const recipient of this.recipients) {
             if (identifier && !identifier.equals(recipient.recipient_identifier)) continue;

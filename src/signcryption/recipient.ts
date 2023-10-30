@@ -3,10 +3,12 @@ import * as crypto from 'crypto';
 import tweetnacl from 'tweetnacl';
 import { isBufferOrUint8Array } from '../util.js';
 
-export type SymmetricKeyRecipient = {
-    key: Uint8Array;
-    identifier: Uint8Array;
-};
+export class SymmetricKeyRecipient {
+    constructor(
+        readonly recipient_identifier: Uint8Array,
+        readonly key: Uint8Array
+    ) {}
+}
 
 export default class SigncryptedMessageRecipient {
     static readonly SHARED_KEY_NONCE = Buffer.from('saltpack_derived_sboxkey');
@@ -66,7 +68,8 @@ export default class SigncryptedMessageRecipient {
     }
 
     static createSymmetric(
-        recipient: SymmetricKeyRecipient,
+        shared_symmetric_key: Uint8Array,
+        recipient_identifier: Uint8Array,
         ephemeral_public_key: Uint8Array,
         payload_key: Uint8Array,
         index: number | bigint
@@ -77,7 +80,7 @@ export default class SigncryptedMessageRecipient {
         const derived_key = crypto
             .createHmac('sha512', this.HMAC_KEY_SYMMETRIC)
             .update(ephemeral_public_key)
-            .update(recipient.key)
+            .update(shared_symmetric_key)
             .digest()
             .slice(0, 32);
 
@@ -89,7 +92,7 @@ export default class SigncryptedMessageRecipient {
             Uint8Array.from(derived_key)
         );
 
-        return new this(recipient.identifier, encrypted_payload_key, index);
+        return new this(recipient_identifier, encrypted_payload_key, index);
     }
 
     static from(
