@@ -299,7 +299,6 @@ import * as tweetnacl from 'tweetnacl';
 
 const sender_keypair: tweetnacl.SignKeyPair = tweetnacl.sign.keyPair();
 const recipients_keys: (Uint8Array | SymmetricKeyRecipient)[] = [
-    // TODO: how can a recipient identifier and symmetric key be provided?
     tweetnacl.box.keyPair().publicKey,
 ];
 

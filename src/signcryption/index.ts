@@ -85,9 +85,9 @@ export class SigncryptStream extends Transform {
         this.keypair = keypair;
 
         const recipients = recipients_keys.map((key, index) => key instanceof SymmetricKeyRecipient ?
-        SigncryptedMessageRecipient.createSymmetric(key.key, key.recipient_identifier,
-            this.ephemeral_keypair.publicKey, this.payload_key, index) :
-        SigncryptedMessageRecipient.create(key, this.ephemeral_keypair.secretKey, this.payload_key, index));
+            SigncryptedMessageRecipient.createSymmetric(key.key, key.recipient_identifier,
+                this.ephemeral_keypair.publicKey, this.payload_key, index) :
+            SigncryptedMessageRecipient.create(key, this.ephemeral_keypair.secretKey, this.payload_key, index));
 
         this.header = SigncryptedMessageHeader.create(
             this.ephemeral_keypair.publicKey, this.payload_key, this.keypair?.publicKey ?? null, recipients
